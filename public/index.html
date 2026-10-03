@@ -154,6 +154,17 @@
                   <button data-value="off">Off</button>
                 </div>
               </div>
+              <div class="setting">
+                <span class="setting-label">Judges interrupt</span>
+                <div class="seg small" data-setting="interrupts">
+                  <button data-value="off">Off</button>
+                  <button data-value="on">On</button>
+                </div>
+              </div>
+              <p class="hint">
+                With interruptions on, a judge cuts in if a spoken answer runs past 45 seconds
+                (20 in the rapid-fire round), and you get 15 seconds to wrap up.
+              </p>
               <p class="hint">
                 Realistic voices and spoken answers use ElevenLabs credits. For testing, type your
                 answers and use the free browser voice.
@@ -206,6 +217,11 @@
               Hear it again
             </button>
           </article>
+
+          <div class="interjection" id="interjection" hidden>
+            <span id="interjection-who"></span>
+            <q id="interjection-text"></q>
+          </div>
 
           <div class="answer" id="answer-voice" hidden>
             <button id="rec-btn" class="rec-btn" aria-label="Start answering"><span class="rec-dot"></span></button>

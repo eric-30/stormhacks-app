@@ -27,6 +27,8 @@ export class Recorder {
     });
     this.recorder.start(1000);
     this.startedAt = performance.now();
+    this.pausedFor = 0; // ms spent paused, left out of elapsed()
+    this.pausedAt = null;
 
     this.context = new AudioContext();
     const analyser = this.context.createAnalyser();
@@ -34,7 +36,7 @@ export class Recorder {
     this.context.createMediaStreamSource(this.stream).connect(analyser);
     const samples = new Uint8Array(analyser.fftSize);
 
-    const loop = () => {
+    this.loop = () => {
       if (this.recorder?.state !== 'recording') return;
       analyser.getByteTimeDomainData(samples);
       let sum = 0;
@@ -43,17 +45,40 @@ export class Recorder {
       const seconds = this.elapsed();
       onTick?.(seconds);
       if (seconds >= limit) return onLimit?.();
-      this.frame = requestAnimationFrame(loop);
+      this.frame = requestAnimationFrame(this.loop);
     };
-    loop();
+    this.loop();
   }
 
+  // True from start() until stop(), paused or not.
   get recording() {
-    return this.recorder?.state === 'recording';
+    return Boolean(this.recorder) && this.recorder.state !== 'inactive';
   }
 
+  get paused() {
+    return this.recorder?.state === 'paused';
+  }
+
+  // Nothing is recorded while paused, so the audio has no gap where the pause was.
+  pause() {
+    if (this.recorder?.state !== 'recording') return;
+    this.recorder.pause();
+    this.pausedAt = performance.now();
+    cancelAnimationFrame(this.frame);
+  }
+
+  resume() {
+    if (!this.paused) return;
+    this.pausedFor += performance.now() - this.pausedAt;
+    this.pausedAt = null;
+    this.recorder.resume();
+    this.loop();
+  }
+
+  // Seconds recorded so far, not counting pauses.
   elapsed() {
-    return (performance.now() - this.startedAt) / 1000;
+    const now = this.pausedAt ?? performance.now();
+    return (now - this.startedAt - this.pausedFor) / 1000;
   }
 
   // Resolves to { blob, seconds }.

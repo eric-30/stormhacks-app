@@ -32,7 +32,7 @@ const SETTINGS_KEY = 'toughcrowd.settings';
 const settings = loadSettings();
 
 function loadSettings() {
-  const defaults = { judges: ['business'], format: 'practice', answerMode: 'voice', voiceMode: 'eleven' };
+  const defaults = { judges: ['business'], format: 'practice', answerMode: 'voice', voiceMode: 'eleven', interrupts: 'off' };
   try {
     const saved = { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) };
     saved.judges = PERSONAS.filter((p) => saved.judges?.includes(p));
@@ -540,7 +540,9 @@ function setSeats(persona, seatState) {
 }
 
 function clearTable() {
-  for (const id of ['question-card', 'answer-voice', 'answer-type', 'working', 'problem', 'feedback']) $(id).hidden = true;
+  for (const id of ['question-card', 'interjection', 'answer-voice', 'answer-type', 'working', 'problem', 'feedback']) {
+    $(id).hidden = true;
+  }
 }
 
 async function startQA() {
@@ -627,6 +629,9 @@ async function ask() {
   // Make the next question's audio while this one is being answered.
   const upcoming = state.queue[state.index + 1];
   if (upcoming) voice.prefetch(upcoming.question, upcoming.persona, settings.voiceMode);
+  if (interruptsOn() && state.answerMode === 'voice') {
+    voice.prefetch(JUDGES[item.persona].interrupt, item.persona, settings.voiceMode);
+  }
 
   await speakItem(item);
 }
@@ -645,6 +650,7 @@ async function speakItem(item) {
 
 function showAnswer() {
   const speaking = state.answerMode === 'voice';
+  $('interjection').hidden = true;
   $('answer-voice').hidden = !speaking;
   $('answer-type').hidden = speaking;
   resetRecordUI();
@@ -677,6 +683,32 @@ function showLevel(bars, level) {
   });
 }
 
+// ---- Interruptions (optional): the judge cuts in when a spoken answer runs long ----
+
+const WRAP_UP_SECONDS = 15;
+const interruptAfter = () => (state.rapid ? 20 : 45);
+const interruptsOn = () => settings.interrupts === 'on';
+
+async function interrupt(item) {
+  const cut = { at: recorder.elapsed(), wrapEnd: null };
+  state.cut = cut;
+  recorder.pause(); // the judge's voice stays out of the recording
+  const judge = JUDGES[item.persona];
+  $('interjection-who').textContent = `${judge.name} cuts in`;
+  $('interjection-text').textContent = judge.interrupt;
+  $('interjection').hidden = false;
+  $('rec-hint').textContent = `${judge.name} cut in. Listen…`;
+  setSeats(item.persona, 'speaking');
+  try {
+    await voice.speak(judge.interrupt, item.persona, settings.voiceMode);
+  } catch {}
+  if (settings.voiceMode === 'off') await new Promise((r) => setTimeout(r, 2500));
+  if (state.cut !== cut || !recorder.paused) return; // they stopped in the meantime
+  recorder.resume();
+  cut.wrapEnd = performance.now() + WRAP_UP_SECONDS * 1000;
+  setSeats(item.persona, 'listening');
+}
+
 function resetRecordUI() {
   const btn = $('rec-btn');
   btn.classList.remove('on');
@@ -694,12 +726,20 @@ async function toggleRecording() {
   const item = current();
   if (!item) return;
   voice.stop();
+  state.cut = null;
+  $('interjection').hidden = true;
   const bars = $$('#meter i');
   try {
     await recorder.start({
       onTick: (s) => {
         $('rec-clock').textContent = fmtTime(s);
         $('rec-clock').classList.toggle('warn', s > MAX_SECONDS - 20);
+        if (interruptsOn() && !state.cut && s >= interruptAfter()) interrupt(item);
+        if (state.cut?.wrapEnd) {
+          const left = (state.cut.wrapEnd - performance.now()) / 1000;
+          $('rec-hint').textContent = `Wrap up: ${Math.max(0, Math.ceil(left))} seconds left.`;
+          if (left <= 0) stopRecording();
+        }
       },
       onLevel: (level) => showLevel(bars, level),
       onLimit: () => {
@@ -718,14 +758,18 @@ async function toggleRecording() {
 }
 
 async function stopRecording() {
+  if (state.stopping) return;
   state.stopping = true;
+  voice.stop(); // in case a judge is still cutting in
+  const cut = state.cut;
+  state.cut = null;
   const { blob, seconds } = await recorder.stop();
   state.stopping = false;
   resetRecordUI();
   setSeats(current().persona, 'listening');
   if (seconds < 1.5) return toast('That was too short. Press the button, answer, then press it again.');
   if (blob.size > MAX_BYTES) return toast('That recording is too big to send. Keep answers under 3 minutes.', true);
-  submit(once(() => api.transcribe(blob)));
+  submit(once(() => api.transcribe(blob)), { cutAt: cut?.at });
 }
 
 // A typed answer gets the same shape as /api/transcribe's answer. durationSeconds 0
@@ -744,16 +788,23 @@ function typedTranscript(text) {
 
 // ---- Sending an answer ----
 
-function submit(getTranscript) {
+// extra.cutAt: seconds into the answer when the judge cut in, if they did.
+function submit(getTranscript, extra = {}) {
   const item = current();
   const session = state.session;
-  const attempt = { transcript: null, result: null, pending: null };
+  const attempt = { transcript: null, result: null, pending: null, cutAt: extra.cutAt ?? null };
   item.attempts.push(attempt);
+
+  // Tell the grader about an interruption, so the feedback can mention it.
+  const question =
+    attempt.cutAt === null
+      ? item.question
+      : `${item.question}\n(The judge cut in after ${Math.round(attempt.cutAt)} seconds because the answer ran long, and gave them ${WRAP_UP_SECONDS} seconds to wrap up.)`;
 
   const run = async (onTranscribed) => {
     attempt.transcript = await getTranscript();
     onTranscribed?.();
-    attempt.result = await api.feedback(state.summary, item.question, item.persona, attempt.transcript);
+    attempt.result = await api.feedback(state.summary, question, item.persona, attempt.transcript);
   };
   const drop = () => item.attempts.splice(item.attempts.indexOf(attempt), 1);
 
@@ -785,7 +836,7 @@ function submit(getTranscript) {
       working(false);
       setSeats(item.persona, 'listening');
       problem(e.message, [
-        ['Send it again', () => submit(getTranscript), true],
+        ['Send it again', () => submit(getTranscript, extra), true],
         ['Answer again', () => (problem(false), showAnswer())],
       ]);
     },
@@ -949,7 +1000,7 @@ function checksList(checks, typed) {
 }
 
 function renderFeedback(item) {
-  const { transcript, result } = item.attempts.at(-1);
+  const { transcript, result, cutAt } = item.attempts.at(-1);
   const score = clampScore(result.score);
   const previous = item.attempts.length > 1 ? clampScore(item.attempts.at(-2).result.score) : null;
   const isLast = state.index >= state.queue.length - 1 && !result.followUp;
@@ -969,6 +1020,7 @@ function renderFeedback(item) {
         <p class="eyebrow">${esc(JUDGES[item.persona].name)}</p>
         <p class="fb-text">${esc(result.feedback)}</p>
         ${checksList(result.checks, !transcript.durationSeconds)}
+        ${cutAt !== null ? `<span class="cut-chip">Cut off at ${fmtTime(cutAt)}</span>` : ''}
         ${delta}
       </div>
     </div>
@@ -1072,18 +1124,19 @@ function renderResults() {
           <div class="result-who">${who}</div><p class="result-q">${esc(item.question)}</p>
           <p class="result-fb">Not answered.</p></div><div></div></li>`;
       }
-      const { transcript: t, result } = tries.at(-1);
+      const { transcript: t, result, cutAt } = tries.at(-1);
       const score = clampScore(result.score);
       const stats = t.durationSeconds
         ? `${plural((t.fillers?.um || 0) + (t.fillers?.uh || 0) + (t.fillers?.like || 0), 'filler')} · ${Math.round(t.wordsPerMinute)} wpm · ${plural(t.longPauses || 0, 'long pause')} · ${fmtTime(t.durationSeconds)}`
         : 'Typed answer';
+      const cutNote = cutAt !== null ? ` · cut off at ${fmtTime(cutAt)}` : '';
       const first = tries.length > 1 ? `<small>first try ${clampScore(tries[0].result.score)}</small>` : '<small>/10</small>';
       return `<li class="result"><img src="${j.img}" alt="" /><div>
           <div class="result-who">${who}</div>
           <p class="result-q">${esc(item.question)}</p>
           <p class="result-fb">${esc(result.feedback)}</p>
           ${checksList(result.checks, !t.durationSeconds)}
-          <div class="result-stats">${stats}</div></div>
+          <div class="result-stats">${stats}${cutNote}</div></div>
           <div class="result-score ${scoreRating(score)}">${score}${first}</div></li>`;
     })
     .join('');

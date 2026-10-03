@@ -950,6 +950,37 @@ textarea::placeholder {
   line-height: 1.3;
 }
 
+.interjection {
+  padding: 16px 22px;
+  border: 1px solid rgba(255, 95, 79, 0.45);
+  border-left: 4px solid var(--red);
+  border-radius: var(--radius);
+  background: var(--red-soft);
+  animation: rise 0.25s ease-out;
+}
+.interjection span {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red);
+}
+.interjection q {
+  font-family: var(--serif);
+  font-size: 20px;
+}
+.cut-chip {
+  display: inline-block;
+  margin-top: 12px;
+  margin-right: 8px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: var(--red-soft);
+  color: var(--red);
+  font: 500 14px var(--mono);
+}
+
 .answer {
   display: flex;
   align-items: center;
