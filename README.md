@@ -23,6 +23,9 @@ Built at StormHacks 2026.
   score change, or answer the judge's follow-up question.
 - **Full judging round.** A 3-minute pitch on a timer, recorded, then 1 minute of
   rapid-fire questions, the same as StormHacks judging. Feedback on all of it at the end.
+- **Judges who interrupt (optional).** Ramble, and the judge cuts in out loud: "Sorry,
+  let me stop you there. What's the one-sentence answer?" Then you have 15 seconds to
+  wrap up.
 
 The filler-word count, pace and pauses come from the word timings, counted by our own
 code, not guessed by the AI.
