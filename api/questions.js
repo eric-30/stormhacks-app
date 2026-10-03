@@ -1,4 +1,4 @@
-import { PERSONAS, json, fail, checkPersona, readJson, askModel } from "./_lib.js";
+import { PERSONAS, json, fail, checkPersona, readJson, askModel, checkPasscode } from "./_lib.js";
 
 const FAKE_QUESTIONS = [
   "Who is going to pay for this?",
@@ -7,6 +7,9 @@ const FAKE_QUESTIONS = [
 ];
 
 export async function POST(request) {
+  const denied = checkPasscode(request);
+  if (denied) return denied;
+
   const body = await readJson(request);
   if (!body) return fail("Request body must be JSON");
   const { summary, persona } = body;

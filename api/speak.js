@@ -1,9 +1,12 @@
-import { PERSONAS, fail, checkPersona, readJson } from "./_lib.js";
+import { PERSONAS, fail, checkPersona, readJson, checkPasscode } from "./_lib.js";
 
 // Every character spoken costs ElevenLabs credits, so cap the length.
 const MAX_CHARS = 400;
 
 export async function POST(request) {
+  const denied = checkPasscode(request);
+  if (denied) return denied;
+
   const body = await readJson(request);
   if (!body) return fail("Request body must be JSON");
   const { text, persona } = body;

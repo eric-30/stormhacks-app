@@ -1,6 +1,9 @@
-import { PERSONAS, json, fail, checkPersona, readJson, askModel } from "./_lib.js";
+import { PERSONAS, json, fail, checkPersona, readJson, askModel, checkPasscode } from "./_lib.js";
 
 export async function POST(request) {
+  const denied = checkPasscode(request);
+  if (denied) return denied;
+
   const body = await readJson(request);
   if (!body) return fail("Request body must be JSON");
   const { summary, question, persona, transcript } = body;
@@ -10,7 +13,12 @@ export async function POST(request) {
   if (personaError) return fail(personaError);
   if (!transcript || typeof transcript.text !== "string") return fail("transcript.text is required");
   if (!transcript.text.trim()) {
-    return json({ feedback: "We didn't hear an answer. Try again and speak up.", score: 1, followUp: null });
+    return json({
+      feedback: "We didn't hear an answer. Try again and speak up.",
+      score: 1,
+      followUp: null,
+      checks: { answered: false, usedSlides: false, concise: false, confident: false },
+    });
   }
 
   const judge = PERSONAS[persona];
@@ -34,7 +42,12 @@ export async function POST(request) {
         "Score the answer from 1 to 10, where 5 is an okay answer and 9 or 10 would impress real judges. " +
         "If the answer was vague, dodged the question, or opened an obvious hole, write one short " +
         "follow-up question you would ask next; otherwise followUp is null. " +
-        'Reply with only JSON: {"feedback": "...", "score": 7, "followUp": "..." or null}',
+        "Also mark four checks, each true (pass) or false (fail): answered (they answered the " +
+        "question you actually asked), usedSlides (they used something specific from what they " +
+        "told you about the project), concise (no rambling or repeating), confident (steady " +
+        "delivery: few fillers, a good pace, few long pauses). " +
+        'Reply with only JSON: {"feedback": "...", "score": 7, "followUp": "..." or null, ' +
+        '"checks": {"answered": true, "usedSlides": false, "concise": true, "confident": true}}',
       content:
         `What the team told you about their project:\n${summary.slice(0, 20000)}\n\n` +
         `Your question: ${question}\n\n` +
@@ -44,7 +57,15 @@ export async function POST(request) {
     const score = Math.min(10, Math.max(1, Math.round(Number(result.score)) || 1));
     const followUp = typeof result.followUp === "string" && result.followUp.trim() ? result.followUp : null;
     if (typeof result.feedback !== "string") throw new Error("The model returned no feedback");
-    return json({ feedback: result.feedback, score, followUp });
+    const c = result.checks ?? {};
+    const checks = {
+      answered: c.answered === true,
+      usedSlides: c.usedSlides === true,
+      concise: c.concise === true,
+      // A typed answer has no delivery to judge.
+      confident: !transcript.durationSeconds || c.confident === true,
+    };
+    return json({ feedback: result.feedback, score, followUp, checks });
   } catch (err) {
     console.error("feedback:", err);
     return fail(`Could not grade the answer: ${err.message}`, 502);

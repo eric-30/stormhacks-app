@@ -1,9 +1,12 @@
-import { json, fail } from "./_lib.js";
+import { json, fail, checkPasscode } from "./_lib.js";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 const LONG_PAUSE_SECONDS = 2;
 
 export async function POST(request) {
+  const denied = checkPasscode(request);
+  if (denied) return denied;
+
   if (!process.env.ELEVENLABS_API_KEY) return fail("ELEVENLABS_API_KEY is not set", 500);
 
   const audio = await request.arrayBuffer();
@@ -56,7 +59,9 @@ export function deliveryStats(items) {
   const speakingSeconds = words.length ? words.at(-1).end - words[0].start : 0;
   const wordsPerMinute = speakingSeconds > 0 ? Math.round(words.length / (speakingSeconds / 60)) : 0;
 
-  return { text, durationSeconds, wordsPerMinute, fillers, longPauses };
+  const timings = words.map((w) => ({ text: w.text.trim(), start: w.start, end: w.end }));
+
+  return { text, durationSeconds, wordsPerMinute, fillers, longPauses, words: timings };
 }
 
 function round1(n) {

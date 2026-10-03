@@ -43,6 +43,14 @@ export function fail(message, status = 400) {
   return json({ error: message }, status);
 }
 
+// Returns a 401 response if the passcode is wrong, or null if the request may go on.
+// With no APP_PASSCODE set (local testing), every request may go on.
+export function checkPasscode(request) {
+  const expected = process.env.APP_PASSCODE;
+  if (!expected || request.headers.get("x-passcode") === expected) return null;
+  return fail("Wrong passcode", 401);
+}
+
 export function checkPersona(persona) {
   return Object.hasOwn(PERSONAS, persona) ? null : 'persona must be "business", "confused", "technical" or "teacher"';
 }

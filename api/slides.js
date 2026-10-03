@@ -1,8 +1,11 @@
-import { json, fail, readJson, askModel } from "./_lib.js";
+import { json, fail, readJson, askModel, checkPasscode } from "./_lib.js";
 
 const MAX_SLIDES = 15;
 
 export async function POST(request) {
+  const denied = checkPasscode(request);
+  if (denied) return denied;
+
   const body = await readJson(request);
   if (!body) return fail("Request body must be JSON");
   const { slides } = body;
