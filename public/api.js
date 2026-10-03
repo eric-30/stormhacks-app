@@ -18,7 +18,10 @@ async function post(path, init, as = 'json') {
     try {
       message = (await res.json()).error;
     } catch {}
-    if (!message && res.status === 404) message = `The server doesn't have ${path} yet.`;
+    // A plain file server (or a missing endpoint) answers like this.
+    if (!message && [404, 405, 501].includes(res.status)) {
+      message = `No server is answering ${path} here. Run "vercel dev", or try the page with fake judges.`;
+    }
     throw new ApiError(message || `The server had a problem with ${path} (status ${res.status}).`);
   }
   return as === 'blob' ? res.blob() : res.json();

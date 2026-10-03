@@ -437,6 +437,7 @@ async function startQA() {
     setSeats(null, 'done');
     problem(`The judges couldn't come up with questions. ${failed?.reason?.message ?? ''}`, [
       ['Try again', startQA, true],
+      ...(isMock ? [] : [['Try with fake judges', () => (location.search = '?mock')]]),
       ['Back to setup', leave],
     ]);
     return;
