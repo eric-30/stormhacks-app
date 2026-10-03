@@ -11,8 +11,9 @@ export async function warmUpMic() {
 }
 
 export class Recorder {
-  // onTick(seconds), onLevel(0..1), onLimit() when `limit` seconds are reached
-  async start({ onTick, onLevel, onLimit, limit = MAX_SECONDS }) {
+  // onTick(seconds), onLevel(0..1), onLimit() when `limit` seconds are reached.
+  // A lower bitsPerSecond fits a longer recording under 4 MB (24000 is about 17 minutes).
+  async start({ onTick, onLevel, onLimit, limit = MAX_SECONDS, bitsPerSecond = 64000 }) {
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true },
     });
@@ -20,7 +21,7 @@ export class Recorder {
       ? 'audio/webm;codecs=opus'
       : 'audio/webm';
     const chunks = [];
-    this.recorder = new MediaRecorder(this.stream, { mimeType, audioBitsPerSecond: 64000 });
+    this.recorder = new MediaRecorder(this.stream, { mimeType, audioBitsPerSecond: bitsPerSecond });
     this.recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     this.stopped = new Promise((resolve) => {
       this.recorder.onstop = () => resolve(new Blob(chunks, { type: 'audio/webm' }));

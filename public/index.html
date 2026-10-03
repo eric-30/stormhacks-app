@@ -29,7 +29,7 @@
       <!-- 1. Setup -->
       <section id="screen-setup" class="screen">
         <div class="hero">
-          <p class="eyebrow">Judge Q&amp;A rehearsal</p>
+          <p class="eyebrow">Panel Q&amp;A rehearsal</p>
           <h1>Face the judges <em>before</em> you face the judges.</h1>
           <p class="lede">
             A panel of judges learns about your project and questions you out loud. Then you see how you
@@ -117,11 +117,68 @@
 
           <li class="step">
             <div class="step-head"><span class="step-num">2</span><h2>Pick your panel</h2></div>
+            <p class="hint step-hint">Pick as many as you like. Each judge has their own angle and their own voice.</p>
             <div class="judge-picks" id="judge-picks"></div>
+
+            <form class="custom-judge" id="custom-judge" hidden>
+              <h3>Make your own judge</h3>
+              <p class="hint">Someone from your real panel, like a professor, a sponsor or your boss.</p>
+              <div class="fields">
+                <label class="field">
+                  <span class="field-label">Name</span>
+                  <input id="cj-name" maxlength="40" placeholder="e.g. Professor Hart" required />
+                </label>
+                <label class="field">
+                  <span class="field-label">Voice</span>
+                  <select id="cj-voice"></select>
+                </label>
+                <label class="field field-wide">
+                  <span class="field-label">Who are they, and what do they care about?</span>
+                  <textarea id="cj-desc" rows="3" maxlength="400" required placeholder="e.g. My capstone supervisor. Hates buzzwords, always asks how we tested it and what we'd do with another month."></textarea>
+                </label>
+              </div>
+              <div class="answer-row">
+                <button type="button" class="link-btn" id="cj-cancel">Cancel</button>
+                <button class="btn btn-primary" type="submit">Add to the panel</button>
+              </div>
+            </form>
           </li>
 
           <li class="step">
-            <div class="step-head"><span class="step-num">3</span><h2>How do you want to practise?</h2></div>
+            <div class="step-head"><span class="step-num">3</span><h2>Set the scene</h2></div>
+            <div class="scene">
+              <div class="scene-row">
+                <span class="setting-label">What are you practising for?</span>
+                <div class="seg seg-wrap" id="occasion-picks" role="radiogroup" aria-label="What are you practising for?"></div>
+                <div class="occasion-custom" id="occasion-custom" hidden>
+                  <input type="text" id="occasion-text" maxlength="200" aria-label="Describe the occasion"
+                    placeholder="e.g. A science fair, judged by local engineers" />
+                  <p class="hint">Say what it is and who's on the panel. The judges ask questions that fit it.</p>
+                </div>
+              </div>
+              <div class="scene-row">
+                <label class="setting-label" for="difficulty">How tough are the judges?</label>
+                <div class="difficulty">
+                  <input type="range" id="difficulty" min="1" max="5" step="0.01" />
+                  <div class="difficulty-ticks" aria-hidden="true">
+                    <span>Friendly</span><span>Supportive</span><span>Realistic</span><span>Tough</span><span>Brutal</span>
+                  </div>
+                </div>
+                <p class="difficulty-now"><strong id="difficulty-name"></strong> <span id="difficulty-blurb"></span></p>
+              </div>
+              <div class="setting">
+                <span class="setting-label">Questions per judge</span>
+                <div class="seg small" data-setting="perJudge">
+                  <button data-value="1">1</button>
+                  <button data-value="2">2</button>
+                  <button data-value="3">3</button>
+                </div>
+              </div>
+            </div>
+          </li>
+
+          <li class="step">
+            <div class="step-head"><span class="step-num">4</span><h2>How do you want to practise?</h2></div>
             <div class="format-picks">
               <label class="format">
                 <input type="radio" name="format" value="practice" />
@@ -133,10 +190,15 @@
               <label class="format">
                 <input type="radio" name="format" value="judging" />
                 <span class="format-body">
-                  <strong>Full judging round</strong>
-                  <span>A 3-minute pitch, then 1 minute of rapid-fire questions. Feedback at the end, like the real thing.</span>
+                  <strong>Full run-through</strong>
+                  <span id="format-full-text"></span>
                 </span>
               </label>
+            </div>
+            <div class="lengths" id="lengths">
+              <label>Pitch <input type="number" id="pitch-min" min="1" max="15" step="1" /> min</label>
+              <label>Questions <input type="number" id="qa-min" min="1" max="15" step="1" /> min</label>
+              <span class="hint">Set by what you're practising for. Change them to match your real slot.</span>
             </div>
             <div class="settings">
               <div class="setting">
@@ -161,10 +223,7 @@
                   <button data-value="on">On</button>
                 </div>
               </div>
-              <p class="hint">
-                With interruptions on, a judge cuts in if a spoken answer runs past 45 seconds
-                (20 in the rapid-fire round), and you get 15 seconds to wrap up.
-              </p>
+              <p class="hint" id="interrupt-hint"></p>
               <p class="hint">
                 Realistic voices and spoken answers use ElevenLabs credits. For testing, type your
                 answers and use the free browser voice.
@@ -177,14 +236,23 @@
           <button id="start-btn" class="btn btn-primary btn-lg" disabled>Call in the judges</button>
           <p id="start-hint" class="hint">Add your slides first.</p>
         </div>
+
+        <section class="history" id="history" hidden>
+          <div class="history-head">
+            <h2>Your progress</h2>
+            <button type="button" class="link-btn" id="history-clear">Clear</button>
+          </div>
+          <p class="hint">Your last sessions, saved in this browser only.</p>
+          <ol class="history-list" id="history-list"></ol>
+        </section>
       </section>
 
-      <!-- 2. Pitch (full judging round only) -->
+      <!-- 2. Pitch (full run-through only) -->
       <section id="screen-pitch" class="screen" hidden>
         <div class="pitch">
           <div class="pitch-slide" id="pitch-slide"></div>
           <aside class="pitch-side">
-            <p class="eyebrow">Your pitch</p>
+            <p class="eyebrow" id="pitch-eyebrow">Your pitch</p>
             <div class="clock" id="pitch-clock">3:00</div>
             <div class="bar"><div class="bar-fill" id="pitch-bar"></div></div>
             <p class="pitch-rec" id="pitch-rec" hidden><span class="rec-dot-sm"></span>Recording your pitch</p>

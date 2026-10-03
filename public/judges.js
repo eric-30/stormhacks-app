@@ -36,3 +36,28 @@ export const JUDGES = {
 };
 
 export const PERSONAS = Object.keys(JUDGES);
+
+// A judge you make yourself: the server sees persona "custom" plus a name and a
+// description, and the judge speaks with the voice of the built-in judge in `voice`.
+export const CUSTOM_IMG = 'img/judge-custom.jpg';
+
+// What you're practising for. The key is the `setting` the server is told; the minutes
+// are the defaults for the full run-through, and can be changed.
+export const OCCASIONS = {
+  hackathon: { label: 'Hackathon judging', pitch: 3, qa: 1 },
+  class: { label: 'Class presentation', pitch: 5, qa: 3 },
+  defense: { label: 'Thesis or capstone defense', pitch: 10, qa: 10 },
+  'demo-day': { label: 'Startup demo day', pitch: 2, qa: 2 },
+  elevator: { label: 'Elevator pitch', pitch: 1, qa: 1 },
+  custom: { label: 'Something else', pitch: 5, qa: 3 }, // described by the person
+};
+
+// Difficulty 1 to 5. Harder judges ask sharper questions, grade more strictly and
+// cut in sooner.
+export const DIFFICULTY = {
+  1: { name: 'Friendly', blurb: 'Encouraging questions and generous grading. Good for a first run.' },
+  2: { name: 'Supportive', blurb: 'Fair questions, and the benefit of the doubt.' },
+  3: { name: 'Realistic', blurb: 'Like a real panel: fair, but they notice the gaps.' },
+  4: { name: 'Tough', blurb: 'Pointed questions about your weakest spots, and stricter grading.' },
+  5: { name: 'Brutal', blurb: 'Skeptical from the start. They poke every hole and cut in fast.' },
+};

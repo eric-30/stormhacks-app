@@ -1,12 +1,11 @@
 import { api, isMock, onPasscodeNeeded } from './api.js';
-import { JUDGES, PERSONAS } from './judges.js';
+import { JUDGES, PERSONAS, CUSTOM_IMG, OCCASIONS, DIFFICULTY } from './judges.js';
 import { readPdf, MAX_SLIDES } from './slides.js';
 import { Recorder, warmUpMic, MAX_SECONDS, MAX_BYTES } from './recorder.js';
 import * as voice from './voice.js';
 
-const PITCH_SECONDS = 180;
-const PITCH_RECORD_LIMIT = 240; // keep recording a little over time; still well under 4 MB
-const QA_SECONDS = 60;
+const PITCH_EXTRA_SECONDS = 60; // keep recording a little past the pitch time
+const PITCH_BITS_PER_SECOND = 24000; // up to 15 minutes of pitch still fits under 4 MB
 
 const $ = (id) => document.getElementById(id);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -26,26 +25,75 @@ function once(fn) {
   return () => (promise ??= fn().catch((e) => ((promise = null), Promise.reject(e))));
 }
 
-// ---- Settings, remembered in this browser ------------------------------------------
+// ---- Remembered in this browser: settings, your own judges, past sessions ----------
+
+function load(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function store(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+// Judges the person made: [{id, name, description, voice}], voice being a built-in judge.
+const CUSTOM_KEY = 'toughcrowd.judges';
+let customJudges = load(CUSTOM_KEY, []).filter((j) => j?.id && j.name && j.description && JUDGES[j.voice]);
+const saveCustomJudges = () => store(CUSTOM_KEY, customJudges);
 
 const SETTINGS_KEY = 'toughcrowd.settings';
 const settings = loadSettings();
 
 function loadSettings() {
-  const defaults = { judges: ['business'], format: 'practice', answerMode: 'voice', voiceMode: 'eleven', interrupts: 'off' };
-  try {
-    const saved = { ...defaults, ...JSON.parse(localStorage.getItem(SETTINGS_KEY)) };
-    saved.judges = PERSONAS.filter((p) => saved.judges?.includes(p));
-    return saved;
-  } catch {
-    return defaults;
-  }
+  const defaults = {
+    judges: ['business'],
+    occasion: 'hackathon',
+    difficulty: 3,
+    perJudge: '3',
+    format: 'practice',
+    pitchMin: OCCASIONS.hackathon.pitch,
+    qaMin: OCCASIONS.hackathon.qa,
+    answerMode: 'voice',
+    voiceMode: 'eleven',
+    interrupts: 'off',
+    occasionText: '', // describes the occasion when it's "Something else"
+  };
+  const saved = { ...defaults, ...load(SETTINGS_KEY, {}) };
+  saved.judges = (saved.judges ?? []).filter((id) => judgeById(id));
+  if (!OCCASIONS[saved.occasion]) saved.occasion = defaults.occasion;
+  saved.difficulty = Math.min(5, Math.max(1, Math.round(Number(saved.difficulty)) || 3));
+  return saved;
 }
 
-function saveSettings() {
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  } catch {}
+const saveSettings = () => store(SETTINGS_KEY, settings);
+
+// What the occasion is called: its label, or what the person wrote for "Something else".
+function occasionLabel(setting, description) {
+  return setting === 'custom' ? description || 'Something else' : OCCASIONS[setting]?.label ?? 'Practice';
+}
+
+// Everything about a judge, built-in or the person's own. `persona` and `custom` are what
+// the server is told; `voice` is the built-in judge whose voice they speak with.
+function judgeById(id) {
+  if (JUDGES[id]) return { ...JUDGES[id], id, persona: id, voice: id, custom: null };
+  const mine = customJudges.find((j) => j.id === id);
+  if (!mine) return null;
+  return {
+    id,
+    name: mine.name,
+    role: 'Your own judge',
+    sample: mine.description,
+    img: CUSTOM_IMG,
+    interrupt: "Sorry, let me stop you there. What's the short version?",
+    persona: 'custom',
+    voice: mine.voice,
+    custom: { name: mine.name, description: mine.description },
+  };
 }
 
 // ---- Session state ------------------------------------------------------------------
@@ -58,8 +106,12 @@ const state = {
   pdfReady: false,
   summary: '', // what the judges know; sent with every request
   answerMode: 'voice',
-  rapid: false, // full judging round: no feedback until the end
-  queue: [], // [{persona, question, followUp, attempts: [{transcript, result, pending}]}]
+  judges: [], // judge ids for this session
+  scene: { difficulty: 3, setting: 'hackathon' }, // sent with questions and feedback
+  pitchSeconds: 180,
+  qaSeconds: 60,
+  rapid: false, // full run-through: no feedback until the end
+  queue: [], // [{judge (id), question, followUp, attempts: [{transcript, result, pending}]}]
   index: 0,
   busy: false, // an answer is being sent
   timeUp: false,
@@ -71,6 +123,7 @@ const recorder = new Recorder();
 const pitchRecorder = new Recorder();
 const timers = { pitch: 0, qa: 0 };
 const current = () => state.queue[state.index];
+const judgeOf = (item) => judgeById(item.judge);
 
 // ---- Screens and small UI helpers ---------------------------------------------------
 
@@ -157,14 +210,19 @@ function initSetup() {
   };
 
   renderJudgePicks();
+  initCustomJudgeForm();
+  initScene();
+  renderHistory();
 
   for (const radio of $$('input[name=format]')) {
     radio.checked = radio.value === settings.format;
     radio.onchange = () => {
       settings.format = radio.value;
       saveSettings();
+      $('lengths').hidden = settings.format !== 'judging';
     };
   }
+  $('lengths').hidden = settings.format !== 'judging';
 
   for (const group of $$('[data-setting]')) {
     const key = group.dataset.setting;
@@ -181,6 +239,10 @@ function initSetup() {
   }
 
   $('start-btn').onclick = startSession;
+  $('history-clear').onclick = () => {
+    store(HISTORY_KEY, []);
+    renderHistory();
+  };
   updateStart();
 }
 
@@ -235,8 +297,9 @@ const NEEDS = {
 function updateStart() {
   const hasSummary = currentSummary().length > 0;
   const hasJudges = settings.judges.length > 0;
+  const hasOccasion = settings.occasion !== 'custom' || settings.occasionText.trim().length > 0;
   const busy = state.reading || state.explaining || explainRecorder.recording;
-  $('start-btn').disabled = busy || !hasSummary || !hasJudges;
+  $('start-btn').disabled = busy || !hasSummary || !hasJudges || !hasOccasion;
   $('start-hint').textContent = state.reading
     ? 'Wait for the judges to finish reading.'
     : busy
@@ -245,7 +308,9 @@ function updateStart() {
         ? NEEDS[state.source]
         : !hasJudges
           ? 'Pick at least one judge.'
-          : '';
+          : !hasOccasion
+            ? "Say what you're practising for in step 3."
+            : '';
 }
 
 // ---- "Explain out loud": record, transcribe, and let them fix the text ----
@@ -368,14 +433,22 @@ async function handleFile(file) {
   }
 }
 
+function allJudgeIds() {
+  return [...PERSONAS, ...customJudges.map((j) => j.id)];
+}
+
 function renderJudgePicks() {
   const box = $('judge-picks');
-  box.innerHTML = PERSONAS.map((p) => {
-    const j = JUDGES[p];
+  const cards = allJudgeIds().map((id) => {
+    const j = judgeById(id);
+    const remove = j.custom
+      ? `<button type="button" class="jp-remove" data-remove="${id}" aria-label="Remove ${esc(j.name)}">Remove</button>`
+      : '';
     return `
       <label class="judge-pick">
-        <input type="checkbox" value="${p}" ${settings.judges.includes(p) ? 'checked' : ''} />
+        <input type="checkbox" value="${id}" ${settings.judges.includes(id) ? 'checked' : ''} />
         <img src="${j.img}" alt="" />
+        ${remove}
         <span class="jp-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
         <span class="jp-body">
           <strong>${esc(j.name)}</strong>
@@ -383,7 +456,13 @@ function renderJudgePicks() {
           <q>${esc(j.sample)}</q>
         </span>
       </label>`;
-  }).join('');
+  });
+  cards.push(`
+    <button type="button" class="judge-add" id="judge-add">
+      <span class="plus" aria-hidden="true">+</span>
+      Make your own judge
+    </button>`);
+  box.innerHTML = cards.join('');
   for (const input of $$('input', box)) {
     input.onchange = () => {
       settings.judges = $$('input:checked', box).map((i) => i.value);
@@ -391,10 +470,133 @@ function renderJudgePicks() {
       updateStart();
     };
   }
+  for (const b of $$('[data-remove]', box)) {
+    b.onclick = (e) => {
+      e.preventDefault(); // don't also tick the card
+      customJudges = customJudges.filter((j) => j.id !== b.dataset.remove);
+      settings.judges = settings.judges.filter((id) => id !== b.dataset.remove);
+      saveCustomJudges();
+      saveSettings();
+      renderJudgePicks();
+      updateStart();
+    };
+  }
+  $('judge-add').onclick = () => {
+    $('custom-judge').hidden = false;
+    $('cj-name').focus();
+  };
+}
+
+function initCustomJudgeForm() {
+  $('cj-voice').innerHTML = PERSONAS.map(
+    (p) => `<option value="${p}">Like ${esc(JUDGES[p].name.replace(/^The /, 'the '))}</option>`,
+  ).join('');
+  const form = $('custom-judge');
+  const close = () => {
+    form.reset();
+    form.hidden = true;
+  };
+  $('cj-cancel').onclick = close;
+  form.onsubmit = (e) => {
+    e.preventDefault();
+    const name = $('cj-name').value.trim();
+    const description = $('cj-desc').value.trim();
+    if (!name || !description) return;
+    const id = `custom-${Date.now().toString(36)}`;
+    customJudges.push({ id, name, description, voice: $('cj-voice').value });
+    settings.judges.push(id);
+    saveCustomJudges();
+    saveSettings();
+    close();
+    renderJudgePicks();
+    updateStart();
+  };
+}
+
+// ---- Set the scene: what for, how tough, how many questions ----
+
+function initScene() {
+  $('occasion-picks').innerHTML = Object.entries(OCCASIONS)
+    .map(([key, o]) => `<button type="button" role="radio" data-occasion="${key}">${esc(o.label)}</button>`)
+    .join('');
+  for (const b of $$('[data-occasion]')) {
+    b.onclick = () => {
+      settings.occasion = b.dataset.occasion;
+      // A new occasion brings its usual lengths.
+      settings.pitchMin = OCCASIONS[settings.occasion].pitch;
+      settings.qaMin = OCCASIONS[settings.occasion].qa;
+      saveSettings();
+      syncScene();
+      if (settings.occasion === 'custom') $('occasion-text').focus();
+    };
+  }
+
+  $('occasion-text').value = settings.occasionText;
+  $('occasion-text').oninput = () => {
+    settings.occasionText = $('occasion-text').value;
+    saveSettings();
+    updateStart();
+  };
+
+  // The slider glides while you drag it and snaps to the nearest level when you let go.
+  // The arrow keys move one level at a time.
+  const slider = $('difficulty');
+  slider.value = settings.difficulty;
+  const setLevel = (level, snap) => {
+    settings.difficulty = Math.min(5, Math.max(1, level));
+    if (snap) slider.value = settings.difficulty;
+    saveSettings();
+    syncScene();
+  };
+  slider.oninput = () => setLevel(Math.round(Number(slider.value)), false);
+  slider.onchange = () => setLevel(Math.round(Number(slider.value)), true);
+  slider.onkeydown = (e) => {
+    const step = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    setLevel(settings.difficulty + step, true);
+  };
+
+  for (const [id, key] of [
+    ['pitch-min', 'pitchMin'],
+    ['qa-min', 'qaMin'],
+  ]) {
+    $(id).onchange = () => {
+      settings[key] = Math.min(15, Math.max(1, Math.round(Number($(id).value)) || 1));
+      saveSettings();
+      syncScene();
+    };
+  }
+  syncScene();
+}
+
+function syncScene() {
+  for (const b of $$('[data-occasion]')) b.setAttribute('aria-checked', b.dataset.occasion === settings.occasion);
+  $('occasion-custom').hidden = settings.occasion !== 'custom';
+  updateStart();
+  const level = DIFFICULTY[settings.difficulty];
+  $('difficulty').setAttribute('aria-valuetext', level.name);
+  $('difficulty-name').textContent = level.name;
+  $('difficulty-blurb').textContent = level.blurb;
+  $('pitch-min').value = settings.pitchMin;
+  $('qa-min').value = settings.qaMin;
+  $('format-full-text').textContent =
+    `A ${settings.pitchMin}-minute pitch on a timer, then ${plural(settings.qaMin, 'minute')} of ` +
+    'rapid-fire questions. Feedback at the end, like the real thing.';
+  const [practice, rapid] = interruptTimes(settings.difficulty);
+  $('interrupt-hint').textContent =
+    `With interruptions on, a judge cuts in when a spoken answer runs past ${practice} seconds ` +
+    `(${rapid} in the run-through), and you get ${WRAP_UP_SECONDS} seconds to wrap up. ` +
+    'Tougher judges cut in sooner.';
 }
 
 async function startSession() {
   state.summary = currentSummary();
+  state.judges = settings.judges.filter((id) => judgeById(id));
+  state.scene = { difficulty: settings.difficulty, setting: settings.occasion };
+  if (settings.occasion === 'custom') state.scene.settingDescription = settings.occasionText.trim();
+  state.pitchSeconds = settings.pitchMin * 60;
+  state.qaSeconds = settings.qaMin * 60;
   state.rapid = settings.format === 'judging';
   state.answerMode = settings.answerMode;
   if (state.answerMode === 'voice') {
@@ -412,6 +614,7 @@ async function startSession() {
 
 function leave() {
   endSession();
+  renderHistory();
   show('setup');
 }
 
@@ -429,9 +632,10 @@ function endSession() {
 function startPitch() {
   endSession();
   show('pitch');
+  $('pitch-eyebrow').textContent = `Your pitch · ${occasionLabel(state.scene.setting, state.scene.settingDescription)}`;
   state.slideIndex = 0;
   renderPitchSlide();
-  $('pitch-clock').textContent = fmtTime(PITCH_SECONDS);
+  $('pitch-clock').textContent = fmtTime(state.pitchSeconds);
   $('pitch-clock').className = 'clock';
   $('pitch-bar').className = 'bar-fill';
   $('pitch-bar').style.transform = 'scaleX(1)';
@@ -465,20 +669,24 @@ async function startPitchClock() {
   const session = state.session;
   if (state.answerMode === 'voice') {
     try {
-      await pitchRecorder.start({ limit: PITCH_RECORD_LIMIT, onLimit: () => pitchRecorder.stop() });
+      await pitchRecorder.start({
+        limit: state.pitchSeconds + PITCH_EXTRA_SECONDS,
+        bitsPerSecond: PITCH_BITS_PER_SECOND,
+        onLimit: () => pitchRecorder.stop(),
+      });
       $('pitch-rec').hidden = false;
     } catch {
       toast("Couldn't use your microphone, so your pitch isn't being recorded.", true);
     }
   }
-  const end = performance.now() + PITCH_SECONDS * 1000;
+  const end = performance.now() + state.pitchSeconds * 1000;
   timers.pitch = setInterval(() => {
     const left = (end - performance.now()) / 1000;
     const kind = left <= 0 ? ' over' : left <= 30 ? ' warn' : '';
     $('pitch-clock').textContent = fmtTime(left);
     $('pitch-clock').className = `clock${kind}`;
     $('pitch-bar').className = `bar-fill${kind}`;
-    $('pitch-bar').style.transform = `scaleX(${Math.max(0, left / PITCH_SECONDS)})`;
+    $('pitch-bar').style.transform = `scaleX(${Math.max(0, left / state.pitchSeconds)})`;
     if (left <= 0) {
       clearInterval(timers.pitch);
       toast("Time! The judges have questions.");
@@ -508,12 +716,12 @@ async function finishPitch() {
 // ---- 3. The judging table -----------------------------------------------------------
 
 function renderPanel() {
-  $('panel').innerHTML = settings.judges
+  $('panel').innerHTML = state.judges
     .map(
-      (p) => `
-      <div class="seat" data-persona="${p}" data-state="idle">
-        <div class="seat-portrait"><img src="${JUDGES[p].img}" alt="" /></div>
-        <div class="seat-name">${esc(JUDGES[p].name)}</div>
+      (id) => `
+      <div class="seat" data-judge="${id}" data-state="idle">
+        <div class="seat-portrait"><img src="${judgeById(id).img}" alt="" /></div>
+        <div class="seat-name">${esc(judgeById(id).name)}</div>
         <div class="seat-state"></div>
       </div>`,
     )
@@ -528,10 +736,10 @@ const SEAT_LABEL = {
   done: '',
 };
 
-// persona null means every judge at once.
-function setSeats(persona, seatState) {
+// judgeId null means every judge at once.
+function setSeats(judgeId, seatState) {
   for (const seat of $$('.seat')) {
-    const on = persona === null || seat.dataset.persona === persona;
+    const on = judgeId === null || seat.dataset.judge === judgeId;
     seat.classList.toggle('active', on);
     seat.classList.toggle('recording', on && recorder.recording);
     seat.dataset.state = on ? seatState : 'idle';
@@ -559,8 +767,8 @@ async function startQA() {
   setSeats(null, 'thinking');
   working('The judges are reading your slides and writing their questions…');
 
-  const judges = [...settings.judges];
-  const results = await Promise.allSettled(judges.map((p) => api.questions(state.summary, p)));
+  const judges = state.judges;
+  const results = await Promise.allSettled(judges.map((id) => api.questions(state.summary, judgeById(id), state.scene)));
   if (session !== state.session) return;
   working(false);
 
@@ -568,7 +776,8 @@ async function startQA() {
     r.status === 'fulfilled' && Array.isArray(r.value)
       ? r.value
           .filter((q) => typeof q === 'string' && q.trim())
-          .map((q) => ({ persona: judges[i], question: q.trim(), followUp: false, attempts: [] }))
+          .slice(0, Number(settings.perJudge) || 3)
+          .map((q) => ({ judge: judges[i], question: q.trim(), followUp: false, attempts: [] }))
       : [],
   );
   // Take turns: each judge's first question, then each judge's second, and so on.
@@ -595,14 +804,14 @@ async function startQA() {
 function startQaClock() {
   $('qa-timer').hidden = false;
   $('qa-clock').classList.remove('over');
-  const end = performance.now() + QA_SECONDS * 1000;
+  const end = performance.now() + state.qaSeconds * 1000;
   timers.qa = setInterval(() => {
     const left = (end - performance.now()) / 1000;
     const kind = left <= 0 ? ' over' : left <= 15 ? ' warn' : '';
     $('qa-clock').textContent = fmtTime(left);
     $('qa-clock').className = `clock-sm${kind}`;
     $('qa-bar').className = `bar-fill${kind}`;
-    $('qa-bar').style.transform = `scaleX(${Math.max(0, left / QA_SECONDS)})`;
+    $('qa-bar').style.transform = `scaleX(${Math.max(0, left / state.qaSeconds)})`;
     if (left > 0) return;
     clearInterval(timers.qa);
     state.timeUp = true;
@@ -616,7 +825,7 @@ async function ask() {
   const item = current();
   if (!item) return finish();
   clearTable();
-  $('q-who').innerHTML = esc(JUDGES[item.persona].name) + (item.followUp ? '<span class="q-follow">Follow-up</span>' : '');
+  $('q-who').innerHTML = esc(judgeOf(item).name) + (item.followUp ? '<span class="q-follow">Follow-up</span>' : '');
   $('q-progress').textContent = `Question ${state.index + 1} of ${state.queue.length}`;
   $('q-text').textContent = item.question;
   $('voice-error').hidden = true;
@@ -629,9 +838,9 @@ async function ask() {
 
   // Make the next question's audio while this one is being answered.
   const upcoming = state.queue[state.index + 1];
-  if (upcoming) voice.prefetch(upcoming.question, upcoming.persona, settings.voiceMode);
+  if (upcoming) voice.prefetch(upcoming.question, judgeOf(upcoming).voice, settings.voiceMode);
   if (interruptsOn() && state.answerMode === 'voice') {
-    voice.prefetch(JUDGES[item.persona].interrupt, item.persona, settings.voiceMode);
+    voice.prefetch(judgeOf(item).interrupt, judgeOf(item).voice, settings.voiceMode);
   }
 
   await speakItem(item);
@@ -639,22 +848,22 @@ async function ask() {
 
 // Speaks a line in the judge's voice. If the realistic voice fails, say why on the
 // question card and use the browser's voice instead, so the judge is still heard.
-async function judgeSays(text, persona, onStart) {
+async function judgeSays(text, judge, onStart) {
   try {
-    await voice.speak(text, persona, settings.voiceMode, onStart);
+    await voice.speak(text, judge.voice, settings.voiceMode, onStart);
   } catch (e) {
     $('voice-error').textContent = `The realistic voice didn't work, so this is the browser's voice. ${e.message}`;
     $('voice-error').hidden = false;
-    await voice.speak(text, persona, 'browser', onStart);
+    await voice.speak(text, judge.voice, 'browser', onStart);
   }
 }
 
 async function speakItem(item) {
-  setSeats(item.persona, 'thinking');
-  await judgeSays(item.question, item.persona, () => {
-    if (!recorder.recording) setSeats(item.persona, 'speaking');
+  setSeats(item.judge, 'thinking');
+  await judgeSays(item.question, judgeOf(item), () => {
+    if (!recorder.recording) setSeats(item.judge, 'speaking');
   });
-  if (current() === item && !state.busy && $('feedback').hidden) setSeats(item.persona, 'listening');
+  if (current() === item && !state.busy && $('feedback').hidden) setSeats(item.judge, 'listening');
 }
 
 function showAnswer() {
@@ -695,25 +904,36 @@ function showLevel(bars, level) {
 // ---- Interruptions (optional): the judge cuts in when a spoken answer runs long ----
 
 const WRAP_UP_SECONDS = 15;
-const interruptAfter = () => (state.rapid ? 20 : 45);
+
+// Seconds into an answer before the judge cuts in, by difficulty: [practice, run-through].
+function interruptTimes(difficulty) {
+  return [
+    [60, 30],
+    [55, 25],
+    [45, 20],
+    [35, 15],
+    [25, 12],
+  ][difficulty - 1];
+}
+const interruptAfter = () => interruptTimes(state.scene.difficulty)[state.rapid ? 1 : 0];
 const interruptsOn = () => settings.interrupts === 'on';
 
 async function interrupt(item) {
   const cut = { at: recorder.elapsed(), wrapEnd: null };
   state.cut = cut;
   recorder.pause(); // the judge's voice stays out of the recording
-  const judge = JUDGES[item.persona];
+  const judge = judgeOf(item);
   $('interjection-who').textContent = `${judge.name} cuts in`;
   $('interjection-text').textContent = judge.interrupt;
   $('interjection').hidden = false;
   $('rec-hint').textContent = `${judge.name} cut in. Listen…`;
-  setSeats(item.persona, 'speaking');
-  await judgeSays(judge.interrupt, item.persona);
+  setSeats(item.judge, 'speaking');
+  await judgeSays(judge.interrupt, judge);
   if (settings.voiceMode === 'off') await new Promise((r) => setTimeout(r, 2500));
   if (state.cut !== cut || !recorder.paused) return; // they stopped in the meantime
   recorder.resume();
   cut.wrapEnd = performance.now() + WRAP_UP_SECONDS * 1000;
-  setSeats(item.persona, 'listening');
+  setSeats(item.judge, 'listening');
 }
 
 function resetRecordUI() {
@@ -761,7 +981,7 @@ async function toggleRecording() {
   btn.classList.add('on');
   btn.setAttribute('aria-label', 'Stop and send your answer');
   $('rec-hint').textContent = "Recording. Press again when you're done.";
-  setSeats(item.persona, 'listening');
+  setSeats(item.judge, 'listening');
 }
 
 async function stopRecording() {
@@ -773,7 +993,7 @@ async function stopRecording() {
   const { blob, seconds } = await recorder.stop();
   state.stopping = false;
   resetRecordUI();
-  setSeats(current().persona, 'listening');
+  setSeats(current().judge, 'listening');
   if (seconds < 1.5) return toast('That was too short. Press the button, answer, then press it again.');
   if (blob.size > MAX_BYTES) return toast('That recording is too big to send. Keep answers under 3 minutes.', true);
   submit(once(() => api.transcribe(blob)), { cutAt: cut?.at });
@@ -811,7 +1031,7 @@ function submit(getTranscript, extra = {}) {
   const run = async (onTranscribed) => {
     attempt.transcript = await getTranscript();
     onTranscribed?.();
-    attempt.result = await api.feedback(state.summary, question, item.persona, attempt.transcript);
+    attempt.result = await api.feedback(state.summary, question, judgeOf(item), attempt.transcript, state.scene);
   };
   const drop = () => item.attempts.splice(item.attempts.indexOf(attempt), 1);
 
@@ -825,10 +1045,10 @@ function submit(getTranscript, extra = {}) {
   $('answer-voice').hidden = true;
   $('answer-type').hidden = true;
   problem(false);
-  setSeats(item.persona, 'deliberating');
-  working(state.answerMode === 'voice' ? 'Listening back to your answer…' : `${JUDGES[item.persona].name} is reading your answer…`);
+  setSeats(item.judge, 'deliberating');
+  working(state.answerMode === 'voice' ? 'Listening back to your answer…' : `${judgeOf(item).name} is reading your answer…`);
   attempt.pending = run(() => {
-    if (session === state.session) working(`${JUDGES[item.persona].name} is deciding what to make of that…`);
+    if (session === state.session) working(`${judgeOf(item).name} is deciding what to make of that…`);
   }).then(
     () => {
       if (session !== state.session) return;
@@ -841,7 +1061,7 @@ function submit(getTranscript, extra = {}) {
       if (session !== state.session) return;
       state.busy = false;
       working(false);
-      setSeats(item.persona, 'listening');
+      setSeats(item.judge, 'listening');
       problem(e.message, [
         ['Send it again', () => submit(getTranscript, extra), true],
         ['Answer again', () => (problem(false), showAnswer())],
@@ -930,8 +1150,8 @@ function pitchSection() {
     const t = pitch.transcript;
     const seconds = t.durationSeconds || pitch.seconds;
     const [note, rating] =
-      seconds > PITCH_SECONDS ? ['Over the 3 minutes. The judges would cut you off.', 'bad']
-      : seconds >= PITCH_SECONDS - 45 ? ['A good use of the 3 minutes.', 'good']
+      seconds > state.pitchSeconds ? [`Over your ${plural(state.pitchSeconds / 60, 'minute')}. You'd be cut off.`, 'bad']
+      : seconds >= state.pitchSeconds * 0.75 ? [`A good use of your ${plural(state.pitchSeconds / 60, 'minute')}.`, 'good']
       : ['Room to spare. Fine, if you covered everything.', 'ok'];
     body = `
       <div class="report">
@@ -1024,7 +1244,7 @@ function renderFeedback(item) {
     <div class="fb-top">
       ${scoreRing(score)}
       <div class="fb-body">
-        <p class="eyebrow">${esc(JUDGES[item.persona].name)}</p>
+        <p class="eyebrow">${esc(judgeOf(item).name)}</p>
         <p class="fb-text">${esc(result.feedback)}</p>
         ${checksList(result.checks, !transcript.durationSeconds)}
         ${cutAt !== null ? `<span class="cut-chip">Cut off at ${fmtTime(cutAt)}</span>` : ''}
@@ -1043,7 +1263,7 @@ function renderFeedback(item) {
       <button class="btn btn-primary" data-act="next">${isLast ? 'See results' : 'Next question'}</button>
     </div>`;
   box.hidden = false;
-  setSeats(item.persona, 'done');
+  setSeats(item.judge, 'done');
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
@@ -1053,12 +1273,12 @@ function onFeedbackAction(e) {
   if (!action || !item) return;
   if (action === 'retry') {
     $('feedback').hidden = true;
-    setSeats(item.persona, 'listening');
+    setSeats(item.judge, 'listening');
     showAnswer();
     $('question-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } else if (action === 'follow-up') {
     const { followUp } = item.attempts.at(-1).result;
-    state.queue.splice(state.index + 1, 0, { persona: item.persona, question: followUp, followUp: true, attempts: [] });
+    state.queue.splice(state.index + 1, 0, { judge: item.judge, question: followUp, followUp: true, attempts: [] });
     next();
   } else if (action === 'next') {
     next();
@@ -1107,6 +1327,7 @@ function renderResults() {
     : "Rough round. That's what practice is for.";
 
   const spoken = latest.map((a) => a.transcript).filter((t) => t.durationSeconds > 0);
+  saveHistory(average, latest.length, spoken);
   let totals = '';
   if (spoken.length) {
     const seconds = spoken.reduce((s, t) => s + t.durationSeconds, 0);
@@ -1123,7 +1344,7 @@ function renderResults() {
 
   const rows = asked
     .map((item) => {
-      const j = JUDGES[item.persona];
+      const j = judgeOf(item);
       const tries = graded(item);
       const who = `${esc(j.name)}${item.followUp ? ' · follow-up' : ''}`;
       if (!tries.length) {
@@ -1152,9 +1373,9 @@ function renderResults() {
     <div class="results-hero">
       ${scoreRing(average, avgText)}
       <div>
-        <p class="eyebrow">Verdict</p>
+        <p class="eyebrow">Verdict · ${esc(occasionLabel(state.scene.setting, state.scene.settingDescription))} · ${DIFFICULTY[state.scene.difficulty].name}</p>
         <h1>${headline}</h1>
-        <p>Average score over ${plural(answered.length, 'answer')} from ${plural(new Set(answered.map((i) => i.persona)).size, 'judge')}.</p>
+        <p>Average score over ${plural(answered.length, 'answer')} from ${plural(new Set(answered.map((i) => i.judge)).size, 'judge')}.</p>
       </div>
     </div>
     ${pitchSection()}
@@ -1162,6 +1383,51 @@ function renderResults() {
     ${totals}
     <ol class="result-list">${rows}</ol>
     ${actions}`;
+}
+
+// ---- Your progress: past sessions, kept in this browser ----
+
+const HISTORY_KEY = 'toughcrowd.history';
+const HISTORY_SIZE = 20;
+
+function saveHistory(average, answers, spoken) {
+  const seconds = spoken.reduce((sum, t) => sum + t.durationSeconds, 0);
+  const fillers = spoken.reduce((sum, t) => sum + Object.values(t.fillers ?? {}).reduce((a, b) => a + b, 0), 0);
+  const entry = {
+    at: Date.now(),
+    occasion: state.scene.setting,
+    occasionLabel: occasionLabel(state.scene.setting, state.scene.settingDescription),
+    difficulty: state.scene.difficulty,
+    judges: state.judges.map((id) => judgeById(id)?.name).filter(Boolean),
+    score: Math.round(average * 10) / 10,
+    answers,
+    fillersPerMinute: seconds ? Math.round((fillers / (seconds / 60)) * 10) / 10 : null,
+    wpm: seconds ? Math.round(spoken.reduce((sum, t) => sum + t.wordsPerMinute * t.durationSeconds, 0) / seconds) : null,
+  };
+  store(HISTORY_KEY, [entry, ...load(HISTORY_KEY, [])].slice(0, HISTORY_SIZE));
+}
+
+function renderHistory() {
+  const history = load(HISTORY_KEY, []);
+  $('history').hidden = !history.length;
+  if (!history.length) return;
+  $('history-list').innerHTML = history
+    .slice(0, 10)
+    .map((h, i) => {
+      const older = history[i + 1];
+      const trend = !older ? '' : h.score > older.score ? ' ↑' : h.score < older.score ? ' ↓' : '';
+      const when = new Date(h.at).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+      const stats = h.wpm
+        ? `${h.fillersPerMinute} fillers/min · ${h.wpm} wpm`
+        : 'Typed answers';
+      return `<li>
+        <span class="history-score ${scoreRating(h.score)}">${h.score}${trend}</span>
+        <span class="history-what">${esc(h.occasionLabel ?? occasionLabel(h.occasion))} · ${DIFFICULTY[h.difficulty]?.name ?? ''}
+          <small>${esc(when)} · ${plural(h.answers, 'answer')} · ${esc(h.judges.join(', '))}</small></span>
+        <span class="history-stats">${stats}</span>
+      </li>`;
+    })
+    .join('');
 }
 
 function onResultsAction(e) {

@@ -16,18 +16,26 @@ Built at StormHacks 2026.
   charts included), explain it out loud, fill in a few boxes, or paste a paragraph.
 - **Pick your panel.** The Investor ("Who pays for this?"), the Grandma ("Explain it like
   I'm your grandma"), the Engineer ("What if the API is down?") and the Teacher ("Walk me
-  through it, step by step"). Each has their own voice.
+  through it, step by step"). Each has their own voice. Or make your own judge from your
+  real panel: a name, what they care about, and a voice.
+- **Set the scene.** Practise for hackathon judging, a class presentation, a thesis or
+  capstone defense, a startup demo day, an elevator pitch, or something you describe.
+  Slide the difficulty from Friendly to Brutal, and pick how many questions each judge
+  asks.
 - **Answer out loud.** The judge speaks the question. You answer, and get a score, what
   worked and what to fix, a pass or fail on four checks, and the delivery numbers:
   filler words, words per minute, long pauses and length. Your transcript shows fillers
   in red and long pauses where they happened.
 - **Try again, or take the follow-up.** Answer the same question twice and watch the
   score change, or answer the judge's follow-up question.
-- **Full judging round.** A 3-minute pitch on a timer, recorded, then 1 minute of
-  rapid-fire questions, the same as StormHacks judging. Feedback on all of it at the end.
+- **Full run-through.** Your pitch on a timer, recorded, then rapid-fire questions:
+  3 minutes and 1 minute for StormHacks judging, longer for a class or a defense, or
+  whatever your real slot is. Feedback on all of it at the end.
 - **Judges who interrupt (optional).** Ramble, and the judge cuts in out loud: "Sorry,
   let me stop you there. What's the one-sentence answer?" Then you have 15 seconds to
-  wrap up.
+  wrap up. Tougher judges cut in sooner.
+- **Your progress.** Your last sessions, kept in your browser, so you can watch your score
+  go up and your filler words go down.
 
 The filler-word count, pace and pauses come from the word timings, counted by our own
 code, not guessed by the AI.

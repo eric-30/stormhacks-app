@@ -63,20 +63,31 @@ const json = (body) => ({
   body: JSON.stringify(body),
 });
 
+// judge: {persona, custom}, where custom is {name, description} for a judge the person
+// made, else null. scene: {difficulty: 1-5, setting: "hackathon" | "class" | ... | "custom",
+// settingDescription: what the person wrote, for "custom"}.
+const judgeFields = (judge, scene) => ({
+  persona: judge.persona,
+  ...(judge.custom ? { custom: judge.custom } : {}),
+  difficulty: scene.difficulty,
+  setting: scene.setting,
+  ...(scene.setting === 'custom' ? { settingDescription: scene.settingDescription } : {}),
+});
+
 const real = {
   // slides: [{text, image}] -> summary string
   slides: (slides) => post('/api/slides', json({ slides })).then((r) => r.summary),
   // -> ["question", "question", "question"]
-  questions: (summary, persona) =>
-    post('/api/questions', json({ summary, persona })).then((r) => r.questions),
+  questions: (summary, judge, scene) =>
+    post('/api/questions', json({ summary, ...judgeFields(judge, scene) })).then((r) => r.questions),
   // -> audio/mpeg Blob
   speak: (text, persona) => post('/api/speak', json({ text, persona }), 'blob'),
   // audio/webm Blob -> {text, durationSeconds, wordsPerMinute, fillers, longPauses, words}
   transcribe: (audio) =>
     post('/api/transcribe', { headers: { 'Content-Type': 'audio/webm' }, body: audio }),
   // -> {feedback, score, followUp, checks}
-  feedback: (summary, question, persona, transcript) =>
-    post('/api/feedback', json({ summary, question, persona, transcript })),
+  feedback: (summary, question, judge, transcript, scene) =>
+    post('/api/feedback', json({ summary, question, transcript, ...judgeFields(judge, scene) })),
 };
 
 // ---- Mock mode -------------------------------------------------------------------
@@ -106,6 +117,12 @@ const MOCK_QUESTIONS = {
   ],
 };
 
+const customQuestions = ({ name }) => [
+  `${name} here. What problem does this really solve?`,
+  'What would you do differently if you started again?',
+  "What's the weakest part of what you've built?",
+];
+
 const MOCK_FEEDBACK = [
   'You answered the question, but it took a while to get there. Lead with the answer, then give the reason.',
   'Clear and confident. Mentioning the numbers from your slides made it believable.',
@@ -128,9 +145,9 @@ const mock = {
       .map((s, i) => `Slide ${i + 1}: ${s.text.slice(0, 160) || 'Mostly a picture, with little text.'}`)
       .join('\n\n');
   },
-  async questions(summary, persona) {
+  async questions(summary, judge) {
     await wait(900 + Math.random() * 600);
-    return MOCK_QUESTIONS[persona];
+    return judge.custom ? customQuestions(judge.custom) : MOCK_QUESTIONS[judge.persona];
   },
   async speak() {
     await wait(200);
@@ -158,12 +175,14 @@ const mock = {
       words,
     };
   },
-  async feedback(summary, question, persona, transcript) {
+  async feedback(summary, question, judge, transcript, scene) {
     await wait(1200);
     const coin = () => Math.random() < 0.65;
+    // Harder judges grade a little lower.
+    const score = 4 + Math.floor(Math.random() * 6) - (scene.difficulty - 3);
     return {
       feedback: pick(MOCK_FEEDBACK),
-      score: 4 + Math.floor(Math.random() * 6),
+      score: Math.min(10, Math.max(1, score)),
       followUp: Math.random() < 0.5 ? pick(MOCK_FOLLOW_UPS) : null,
       checks: {
         answered: coin(),
