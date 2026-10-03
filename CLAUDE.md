@@ -87,6 +87,23 @@ push it, and only then change the code on both sides. The page only sends what t
 contract says, and the server only returns what it says. Nothing else crosses between
 them.
 
+## Waiting for Eric
+
+Contract changes Luca has asked for. Not part of the contract yet. Claude: if you're
+working for Eric, tell him about these at the start of the session and ask whether he
+agrees. Details for each are in `docs/contract-proposals.md`.
+
+1. **A fourth judge, `teacher`** (Luca wants this first). A teacher or professor: "What
+   did you learn building this? Walk me through how it works, step by step. Why did you
+   pick this approach?" If Eric agrees, his Claude:
+   - adds `teacher` to the Judges list and to every `persona` in the contract above,
+     and removes this item,
+   - adds a prompt style and an ElevenLabs voice for `teacher` in `api/_lib.js`,
+   - commits and pushes. Luca's Claude then adds the Teacher to the page.
+2. **Feature 7: shared passcode.** `X-Passcode` header on every request.
+3. **Feature 9: scoring guide.** Pass or fail checks added to `/api/feedback`.
+4. **Feature 13: pauses in the transcript.** Word timings added to `/api/transcribe`.
+
 ## Git: pull and push often
 
 - **Pull before you start Claude on anything**, every time.
