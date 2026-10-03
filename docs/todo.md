@@ -9,7 +9,8 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
       (the one from `models.md`), `OPENROUTER_SLIDES_MODEL`, `ELEVENLABS_API_KEY` and
       `APP_PASSCODE`. Put the live URL at the top of `README.md`. Nothing else matters
       if the demo link doesn't work.
-- [ ] **All** Pick the passcode, and only share the link at judging time (risk 3).
+- [x] **All** Pick the passcode, and only share the link at judging time (risk 3). Set
+      on Vercel Saturday afternoon: no passcode gives 401. Eric tells the team in person.
 - [ ] **L** Real voice test, done once: a Realistic voice and a spoken answer of about
       10 seconds, with two "um"s and a 3-second pause. Check the judge is heard, the "um"s
       show in red, and the pause marker appears. If the "um"s are missing, tell Eric
@@ -24,7 +25,7 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
 
 - [ ] **All** Devpost by **12:00 AM (Saturday midnight)**: project name ToughCrowd, final
       team, hardware: no. Required for prizes.
-- [x] **E** Check the ElevenLabs balance (risk 1).
+- [x] **E** Check the ElevenLabs balance (risk 1). 130,622 credits on Saturday afternoon.
 - [x] **E** Work out roughly what one round costs in API credits, for the "What does it
       cost?" question in `pitch.md`.
 - [ ] **L** Test with our real pitch deck, and with a deck that's mostly pictures.
