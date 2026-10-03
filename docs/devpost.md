@@ -6,9 +6,8 @@ Never say "interview" or "interviewer": say judges, panel, Q&A, pitch defense.
 
 **Project name:** ToughCrowd
 
-**Tagline (max 200 characters):** A panel of AI judges reads your slides, grills you on
-your project out loud, and tells you how your answers came across: what you said and how
-you said it.
+**Tagline (max 200 characters):** Your slides. Four skeptical judges, out loud. Defend
+your project, see how it came across, then try again and watch your score go up.
 
 **Links:** https://toughcrowd.tech [check it works] · https://stormhacks-app.vercel.app ·
 https://github.com/eric-30/stormhacks-app
@@ -46,18 +45,22 @@ slides, asks the hard questions out loud, and tells you honestly how you did.
   - delivery numbers: filler words ("um", "uh", "like"), words per minute and long pauses
   - your transcript, with fillers in red and pauses marked where they happened
   - a follow-up question when you dodged
-- **Judges who cut in.** Turn on "Judges interrupt" and ramble past 45 seconds: the judge
-  cuts in out loud and gives you 15 seconds to wrap up, just like a real panel.
+- **Judges who cut in.** Turn on "Judges interrupt" and run past 45 seconds (20 in
+  rapid-fire): the judge cuts in out loud and gives you 15 seconds to wrap up, just like
+  a real panel.
 - **A full judging round.** A 3-minute pitch on a timer, recorded, then rapid-fire
-  questions, the same format as StormHacks judging, with feedback on all of it at the end.
+  questions, the same format as StormHacks judging. At the end: delivery numbers for the
+  pitch, and full feedback on every answer.
 
 The filler-word count, pace and pauses are measured by our own code from word
 timestamps, not guessed by the AI.
 
 ## How we built it
 
-Three parts, with a written contract between them so two people could build in parallel
-without breaking each other's work.
+One round ties together slide vision, four judge personas, cached judge voices, timed
+interruptions, timestamp analysis and AI grading. It's three parts, with a written
+contract between them so two people could build in parallel without breaking each
+other's work.
 
 - **The page** is plain HTML, CSS and JavaScript, no framework. pdf.js reads each slide's
   text and draws it as an image in the browser. The browser's MediaRecorder records
@@ -73,14 +76,23 @@ without breaking each other's work.
     grading answers. We picked it by testing four models on the same slides and the same
     saved answers. It asked the sharpest questions and graded a weak answer low, where the
     cheapest model gave it a 5 out of 10.
-  - ElevenLabs text-to-speech gives each judge their own voice. The page makes every
-    question's audio as soon as the session starts, so there's no waiting at the table.
+  - ElevenLabs text-to-speech gives each judge their own voice. While you answer one
+    question, the page is already making the next question's audio, and keeps every clip
+    so replays are free.
   - ElevenLabs Scribe turns your answer into text with a timestamp on every word, in
     verbatim mode so "um" and "uh" stay in. Our code counts fillers, words per minute and
     every gap of 2 seconds or more.
 
-A full session costs about 20 cents in AI calls and voices. Nothing is stored: the
-session lives in your browser tab.
+We estimate a full session (4 judges, 12 questions, 12 spoken answers) at about 20 cents
+for AI calls and voices, plus speech-to-text. There's no database: your slides, recordings
+and answers live only in your browser tab, and are sent to the AI services only to be
+processed.
+
+## Why this and not a general voice assistant
+
+A general voice assistant answers what you ask it. ToughCrowd has read your slides, plays
+four judges who each push on a different weak spot, cuts you off when you run long, and
+measures your delivery instead of guessing it.
 
 ## Challenges we ran into
 
@@ -97,13 +109,17 @@ session lives in your browser tab.
 
 ## Accomplishments that we're proud of
 
-- A judge that cuts you off mid-ramble, out loud. It's the moment everyone remembers.
-- Delivery numbers that are measured, not guessed: the same recording always gives the
-  same count.
+- Pressure you can see and hear: judge portraits that show who's speaking, thinking or
+  listening, judges who cut in out loud, and transcripts marked with every filler and
+  pause.
+- Delivery numbers that are measured, not guessed: our code counts them from the word
+  timestamps the transcription returns.
 - Four judges with genuinely different angles, grounded in your actual slides.
 - Two people building the page and the server in parallel from a written contract, with
   no integration surprises.
 - [Only if true: "We used ToughCrowd to prepare for this judging."]
+- [Best evidence: one real weak answer, its feedback, and the retry that scored higher.
+  Screenshot both and add them to the Devpost gallery.]
 
 ## What we learned
 
