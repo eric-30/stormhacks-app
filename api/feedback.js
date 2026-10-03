@@ -1,4 +1,4 @@
-import { PERSONAS, json, fail, checkPersona, readJson, askModel, checkPasscode } from "./_lib.js";
+import { json, fail, readPanel, readJson, askModel, checkPasscode } from "./_lib.js";
 
 export async function POST(request) {
   const denied = checkPasscode(request);
@@ -6,12 +6,12 @@ export async function POST(request) {
 
   const body = await readJson(request);
   if (!body) return fail("Request body must be JSON");
-  const { summary, persona, transcript } = body;
+  const { summary, transcript } = body;
   if (typeof summary !== "string") return fail("summary is required");
   if (typeof body.question !== "string" || !body.question.trim()) return fail("question is required");
   const { question, cutIn } = splitCutIn(body.question);
-  const personaError = checkPersona(persona);
-  if (personaError) return fail(personaError);
+  const panel = readPanel(body);
+  if (panel.error) return fail(panel.error);
   if (!transcript || typeof transcript.text !== "string") return fail("transcript.text is required");
   if (!transcript.text.trim()) {
     return json({
@@ -22,7 +22,7 @@ export async function POST(request) {
     });
   }
 
-  const judge = PERSONAS[persona];
+  const { judge, difficulty, occasion } = panel;
   const f = transcript.fillers ?? {};
   // Typed answers come without timings, so only mention delivery when we have it.
   const delivery = transcript.durationSeconds
@@ -40,11 +40,12 @@ export async function POST(request) {
     const result = await askModel({
       model: process.env.OPENROUTER_MODEL,
       system:
-        `You are ${judge.name} at a student hackathon. ${judge.style} ` +
+        `You are ${judge.name}. The occasion is ${occasion}. ${judge.style} ` +
         "You asked the team a question and they answered out loud. Coach them: say in 2 to 4 " +
         "short sentences what worked and the one most important thing to fix, speaking to them " +
         'as "you". Use the delivery numbers if given, but don\'t just repeat them. ' +
         "Score the answer from 1 to 10, where 5 is an okay answer and 9 or 10 would impress real judges. " +
+        `${difficulty.grading} ` +
         "If the answer was vague, dodged the question, or opened an obvious hole, write one short " +
         "follow-up question you would ask next; otherwise followUp is null. " +
         "Also mark four checks, each true (pass) or false (fail): answered (they answered the " +
