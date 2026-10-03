@@ -1,20 +1,8 @@
 # Contract proposals
 
-Proposed by Luca: a fourth judge, and features 7, 9 and 13. Nothing here is the contract yet. If Eric
+Proposed by Luca: features 7, 9 and 13. Nothing here is the contract yet. If Eric
 agrees, copy the change into the contract in `CLAUDE.md`, commit and push it, and only
 then change the code on both sides. Then delete it from this file.
-
-## A fourth judge: `teacher`
-
-`persona` becomes one of four strings: `"business" | "confused" | "technical" | "teacher"`,
-in every request that has one (`/api/questions`, `/api/speak`, `/api/feedback`).
-
-4. `teacher`: a teacher or professor. "What did you learn building this? Walk me through
-   how it works, step by step. Why did you pick this approach over the obvious one?"
-
-The server needs a prompt style and an ElevenLabs voice for it. The page is ready: the
-Teacher's portrait is `public/img/judge-teacher.jpg`, and adding the judge to the page
-is one entry in `public/judges.js` once this is in the contract.
 
 ## Feature 7: shared passcode
 

@@ -37,11 +37,13 @@ things are the way they are (`decisions.md`). Read `docs/plan.md` and
 
 ## Judges
 
-Built in this order. `persona` is always one of these three strings.
+Built in this order. `persona` is always one of these four strings.
 
 1. `business`: a sponsor or investor. "Who pays for this? Who are your competitors?"
 2. `confused`: non-technical. "I don't get it, explain it like I'm your grandma."
 3. `technical`: skeptical engineer. "How does this scale? What if the API is down?"
+4. `teacher`: a teacher or professor. "What did you learn building this? Walk me through
+   how it works, step by step. Why did you pick this approach over the obvious one?"
 
 ## The contract between the page and the server
 
@@ -55,13 +57,13 @@ Built in this order. `persona` is always one of these three strings.
 
 `POST /api/questions`
 
-- Request body: `{"summary": "string", "persona": "business" | "confused" | "technical"}`
+- Request body: `{"summary": "string", "persona": "business" | "confused" | "technical" | "teacher"}`
 - Success, status 200: `{"questions": ["string", "string", "string"]}`
 - Failure, any other status: `{"error": "text"}`
 
 `POST /api/speak`
 
-- Request body: `{"text": "string", "persona": "business" | "confused" | "technical"}`
+- Request body: `{"text": "string", "persona": "business" | "confused" | "technical" | "teacher"}`
 - Success, status 200: the spoken audio, `Content-Type: audio/mpeg` (not JSON).
   The page plays it with `new Audio(URL.createObjectURL(blob))`.
 - Failure, any other status: `{"error": "text"}`
@@ -78,7 +80,7 @@ Built in this order. `persona` is always one of these three strings.
 
 `POST /api/feedback`
 
-- Request body: `{"summary": "string", "question": "string", "persona": "business" | "confused" | "technical", "transcript": <the whole success body from /api/transcribe>}`
+- Request body: `{"summary": "string", "question": "string", "persona": "business" | "confused" | "technical" | "teacher", "transcript": <the whole success body from /api/transcribe>}`
 - Success, status 200: `{"feedback": "string", "score": 1-10, "followUp": "string or null"}`
 - Failure, any other status: `{"error": "text"}`
 
@@ -93,16 +95,9 @@ Contract changes Luca has asked for. Not part of the contract yet. Claude: if yo
 working for Eric, tell him about these at the start of the session and ask whether he
 agrees. Details for each are in `docs/contract-proposals.md`.
 
-1. **A fourth judge, `teacher`** (Luca wants this first). A teacher or professor: "What
-   did you learn building this? Walk me through how it works, step by step. Why did you
-   pick this approach?" If Eric agrees, his Claude:
-   - adds `teacher` to the Judges list and to every `persona` in the contract above,
-     and removes this item,
-   - adds a prompt style and an ElevenLabs voice for `teacher` in `api/_lib.js`,
-   - commits and pushes. Luca's Claude then adds the Teacher to the page.
-2. **Feature 7: shared passcode.** `X-Passcode` header on every request.
-3. **Feature 9: scoring guide.** Pass or fail checks added to `/api/feedback`.
-4. **Feature 13: pauses in the transcript.** Word timings added to `/api/transcribe`.
+1. **Feature 7: shared passcode.** `X-Passcode` header on every request.
+2. **Feature 9: scoring guide.** Pass or fail checks added to `/api/feedback`.
+3. **Feature 13: pauses in the transcript.** Word timings added to `/api/transcribe`.
 
 ## Git: pull and push often
 
