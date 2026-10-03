@@ -14,7 +14,7 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
       10 seconds, with two "um"s and a 3-second pause. Check the judge is heard, the "um"s
       show in red, and the pause marker appears. If the "um"s are missing, tell Eric
       (risk 2).
-- [ ] **E** Check the feedback prompt handles the interruption note added to `question`.
+- [x] **E** Check the feedback prompt handles the interruption note added to `question`.
 - [ ] **E** Update `pitch.md`: never say "interview", the opening line about last year's
       winner, who else it's for, and the interruption moment in the live demo.
 - [ ] **L** Once it's live: one full round on the Vercel URL in Chrome, including the

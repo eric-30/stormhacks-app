@@ -6,9 +6,10 @@ export async function POST(request) {
 
   const body = await readJson(request);
   if (!body) return fail("Request body must be JSON");
-  const { summary, question, persona, transcript } = body;
+  const { summary, persona, transcript } = body;
   if (typeof summary !== "string") return fail("summary is required");
-  if (typeof question !== "string" || !question.trim()) return fail("question is required");
+  if (typeof body.question !== "string" || !body.question.trim()) return fail("question is required");
+  const { question, cutIn } = splitCutIn(body.question);
   const personaError = checkPersona(persona);
   if (personaError) return fail(personaError);
   if (!transcript || typeof transcript.text !== "string") return fail("transcript.text is required");
@@ -30,6 +31,10 @@ export async function POST(request) {
       `fillers: ${f.um ?? 0} "um", ${f.uh ?? 0} "uh", ${f.like ?? 0} "like", ` +
       `${transcript.longPauses ?? 0} pauses of 2 seconds or more.`
     : "The answer was typed, so there is no delivery data. Judge the content only.";
+  const cutInNote = cutIn
+    ? `\n\nWhat happened (a note from the app, not part of your question): ${cutIn} ` +
+      "Treat this as a sign the answer was not concise. Don't quote this note back."
+    : "";
 
   try {
     const result = await askModel({
@@ -51,7 +56,7 @@ export async function POST(request) {
       content:
         `What the team told you about their project:\n${summary.slice(0, 20000)}\n\n` +
         `Your question: ${question}\n\n` +
-        `Their answer (transcribed): ${transcript.text.slice(0, 8000)}\n\n${delivery}`,
+        `Their answer (transcribed): ${transcript.text.slice(0, 8000)}\n\n${delivery}${cutInNote}`,
     });
 
     const score = Math.min(10, Math.max(1, Math.round(Number(result.score)) || 1));
@@ -61,7 +66,8 @@ export async function POST(request) {
     const checks = {
       answered: c.answered === true,
       usedSlides: c.usedSlides === true,
-      concise: c.concise === true,
+      // A judge had to cut them off, so it ran long.
+      concise: !cutIn && c.concise === true,
       // A typed answer has no delivery to judge.
       confident: !transcript.durationSeconds || c.confident === true,
     };
@@ -70,4 +76,13 @@ export async function POST(request) {
     console.error("feedback:", err);
     return fail(`Could not grade the answer: ${err.message}`, 502);
   }
+}
+
+// When "Judges interrupt" is on, the page adds a line to the question like
+// "(The judge cut in after 46 seconds because the answer ran long, ...)".
+// Split it off so the model grades the real question and doesn't quote the note.
+function splitCutIn(text) {
+  const match = text.match(/\n\s*\((The judge cut in[^)]*)\)\s*$/);
+  if (!match) return { question: text.trim(), cutIn: null };
+  return { question: text.slice(0, match.index).trim(), cutIn: match[1].trim() };
 }
