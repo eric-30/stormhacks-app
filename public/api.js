@@ -6,12 +6,43 @@ export const isMock = new URLSearchParams(location.search).has('mock');
 
 export class ApiError extends Error {}
 
+// ---- Passcode: sent with every request, asked for when the server says 401 ----------
+
+const PASSCODE_KEY = 'toughcrowd.passcode';
+let passcode = '';
+try {
+  passcode = localStorage.getItem(PASSCODE_KEY) || '';
+} catch {}
+
+let askForPasscode = null; // set by the page: (wasWrong) => Promise<code or null>
+let asking = null; // the prompt that's open now, shared by requests that fail together
+
+export function onPasscodeNeeded(ask) {
+  askForPasscode = ask;
+}
+
+function savePasscode(code) {
+  passcode = code;
+  try {
+    localStorage.setItem(PASSCODE_KEY, code);
+  } catch {}
+}
+
 async function post(path, init, as = 'json') {
   let res;
-  try {
-    res = await fetch(path, { method: 'POST', ...init });
-  } catch {
-    throw new ApiError('Could not reach the server. Check your connection and try again.');
+  for (;;) {
+    const sent = passcode;
+    try {
+      res = await fetch(path, { method: 'POST', ...init, headers: { ...init.headers, 'X-Passcode': sent } });
+    } catch {
+      throw new ApiError('Could not reach the server. Check your connection and try again.');
+    }
+    if (res.status !== 401 || !askForPasscode) break;
+    if (passcode !== sent) continue; // another request already got a new code
+    asking ??= askForPasscode(Boolean(sent)).finally(() => (asking = null));
+    const code = await asking;
+    if (!code) throw new ApiError('The judges need the passcode. Ask your team for it.');
+    if (code !== passcode) savePasscode(code);
   }
   if (!res.ok) {
     let message = '';
@@ -40,10 +71,10 @@ const real = {
     post('/api/questions', json({ summary, persona })).then((r) => r.questions),
   // -> audio/mpeg Blob
   speak: (text, persona) => post('/api/speak', json({ text, persona }), 'blob'),
-  // audio/webm Blob -> {text, durationSeconds, wordsPerMinute, fillers, longPauses}
+  // audio/webm Blob -> {text, durationSeconds, wordsPerMinute, fillers, longPauses, words}
   transcribe: (audio) =>
     post('/api/transcribe', { headers: { 'Content-Type': 'audio/webm' }, body: audio }),
-  // -> {feedback, score, followUp}
+  // -> {feedback, score, followUp, checks}
   feedback: (summary, question, persona, transcript) =>
     post('/api/feedback', json({ summary, question, persona, transcript })),
 };
@@ -67,6 +98,11 @@ const MOCK_QUESTIONS = {
     'What happens if the speech-to-text API is down during a demo?',
     'How do you know the filler-word count is accurate?',
     'How does this scale to a thousand users at once?',
+  ],
+  teacher: [
+    "What did you learn building this that you didn't know on Friday?",
+    'Walk me through what happens, step by step, when someone presses record.',
+    'Why did you pick this approach over the obvious one?',
   ],
 };
 
@@ -100,23 +136,41 @@ const mock = {
     await wait(200);
     return null; // No audio: voice.js falls back to the browser voice.
   },
-  async transcribe(audio) {
+  async transcribe() {
     await wait(1000);
-    const seconds = Math.max(3, Math.round(audio.size / 8000));
+    const text =
+      'So, um, basically our app reads your slides and, like, asks you the questions judges would ask. Uh, and then it tells you how you did.';
+    // Fake word timings: a word every 0.35s, with one long pause after "ask."
+    let t = 0.3;
+    const words = text.split(' ').map((word) => {
+      if (word === 'Uh,') t += 2.6;
+      const w = { text: word, start: +t.toFixed(2), end: +(t + 0.28).toFixed(2) };
+      t += 0.35;
+      return w;
+    });
+    const seconds = words.at(-1).end;
     return {
-      text: 'So, um, basically our app reads your slides and, like, asks you the questions judges would ask. Uh, and then it tells you how you did.',
-      durationSeconds: seconds,
-      wordsPerMinute: 120 + Math.round(Math.random() * 70),
+      text,
+      durationSeconds: +seconds.toFixed(1),
+      wordsPerMinute: Math.round(words.length / (seconds / 60)),
       fillers: { um: 1, uh: 1, like: 1 },
-      longPauses: Math.round(Math.random() * 3),
+      longPauses: 1,
+      words,
     };
   },
-  async feedback() {
+  async feedback(summary, question, persona, transcript) {
     await wait(1200);
+    const coin = () => Math.random() < 0.65;
     return {
       feedback: pick(MOCK_FEEDBACK),
       score: 4 + Math.floor(Math.random() * 6),
       followUp: Math.random() < 0.5 ? pick(MOCK_FOLLOW_UPS) : null,
+      checks: {
+        answered: coin(),
+        usedSlides: coin(),
+        concise: coin(),
+        confident: transcript.durationSeconds ? coin() : true,
+      },
     };
   },
 };

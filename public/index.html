@@ -253,6 +253,18 @@
       </section>
     </main>
 
+    <dialog id="passcode-dialog" class="dialog">
+      <form method="dialog">
+        <h2>Passcode, please</h2>
+        <p class="hint" id="passcode-hint"></p>
+        <input type="password" id="passcode-input" aria-label="Passcode" autocomplete="off" required />
+        <div class="dialog-actions">
+          <button class="btn btn-ghost" value="cancel" formnovalidate>Cancel</button>
+          <button class="btn btn-primary" value="ok">Let me in</button>
+        </div>
+      </form>
+    </dialog>
+
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </body>
 </html>

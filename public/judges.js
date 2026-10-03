@@ -21,6 +21,13 @@ export const JUDGES = {
     img: 'img/judge-technical.jpg',
     browserVoice: { pitch: 0.8, rate: 1.1, pick: 2 },
   },
+  teacher: {
+    name: 'The Teacher',
+    role: 'Teacher or professor',
+    sample: 'What did you learn building this? Walk me through it, step by step.',
+    img: 'img/judge-teacher.jpg',
+    browserVoice: { pitch: 1.0, rate: 0.95, pick: 3 },
+  },
 };
 
 export const PERSONAS = Object.keys(JUDGES);

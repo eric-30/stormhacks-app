@@ -1,4 +1,4 @@
-import { api, isMock } from './api.js';
+import { api, isMock, onPasscodeNeeded } from './api.js';
 import { JUDGES, PERSONAS } from './judges.js';
 import { readPdf, MAX_SLIDES } from './slides.js';
 import { Recorder, warmUpMic, MAX_SECONDS, MAX_BYTES } from './recorder.js';
@@ -702,6 +702,7 @@ function typedTranscript(text) {
     wordsPerMinute: 0,
     fillers: { um: count('u+m+'), uh: count('u+h+'), like: count('like') },
     longPauses: 0,
+    words: [],
   };
 }
 
@@ -834,8 +835,50 @@ function deliveryReport(t) {
   </div>`;
 }
 
+// The same filler words the server counts (um, erm, hmm, uh, er, ah, like).
+const FILLER = /\b(u+m+|e+r+m+|h+m+|u+h+|e+r+|a+h+|like)\b/gi;
+
 function highlightFillers(text) {
-  return esc(text).replace(/\b(u+m+|u+h+|like)\b/gi, '<mark class="filler">$1</mark>');
+  return esc(text).replace(FILLER, '<mark class="filler">$1</mark>');
+}
+
+// With word timings, pauses of 2 seconds or more show up where they happened.
+function transcriptHtml(t) {
+  const words = Array.isArray(t.words)
+    ? t.words.filter((w) => typeof w?.text === 'string' && Number.isFinite(w.start) && Number.isFinite(w.end))
+    : [];
+  if (!words.length) return highlightFillers(t.text);
+  return words
+    .map((w, i) => {
+      const gap = i > 0 ? w.start - words[i - 1].end : 0;
+      const pause = gap >= 2 ? `<span class="pause" title="A ${gap.toFixed(1)} second pause">${gap.toFixed(1)}s</span> ` : '';
+      return pause + highlightFillers(w.text);
+    })
+    .join(' ');
+}
+
+// The scoring guide: each one passes or fails.
+const CHECKS = [
+  ['answered', 'Answered the question'],
+  ['usedSlides', 'Used details from your project'],
+  ['concise', 'Concise'],
+  ['confident', 'Confident delivery'],
+];
+
+function shownChecks(checks, typed) {
+  if (!checks || typeof checks !== 'object') return [];
+  return CHECKS.filter(([key]) => typeof checks[key] === 'boolean' && !(typed && key === 'confident'));
+}
+
+function checksList(checks, typed) {
+  const shown = shownChecks(checks, typed);
+  if (!shown.length) return '';
+  return `<ul class="checks">${shown
+    .map(([key, label]) => {
+      const pass = checks[key];
+      return `<li class="${pass ? 'pass' : 'fail'}"><span aria-hidden="true">${pass ? '✓' : '✗'}</span>${label}<span class="sr-only">: ${pass ? 'pass' : 'fail'}</span></li>`;
+    })
+    .join('')}</ul>`;
 }
 
 function renderFeedback(item) {
@@ -858,13 +901,14 @@ function renderFeedback(item) {
       <div class="fb-body">
         <p class="eyebrow">${esc(JUDGES[item.persona].name)}</p>
         <p class="fb-text">${esc(result.feedback)}</p>
+        ${checksList(result.checks, !transcript.durationSeconds)}
         ${delta}
       </div>
     </div>
     ${deliveryReport(transcript)}
     <details class="transcript"${transcript.durationSeconds ? ' open' : ''}>
       <summary>What you said</summary>
-      <p>${highlightFillers(transcript.text) || '<em>Nothing was heard.</em>'}</p>
+      <p>${transcriptHtml(transcript) || '<em>Nothing was heard.</em>'}</p>
     </details>
     ${result.followUp ? `<p class="follow-up"><span>Follow-up</span><q>${esc(result.followUp)}</q></p>` : ''}
     <div class="fb-actions">
@@ -971,6 +1015,7 @@ function renderResults() {
           <div class="result-who">${who}</div>
           <p class="result-q">${esc(item.question)}</p>
           <p class="result-fb">${esc(result.feedback)}</p>
+          ${checksList(result.checks, !t.durationSeconds)}
           <div class="result-stats">${stats}</div></div>
           <div class="result-score ${scoreRating(score)}">${score}${first}</div></li>`;
     })
@@ -1037,5 +1082,23 @@ function initTable() {
   });
 }
 
+// The server asks for the team's passcode (401); ask the person, once, and remember it.
+function initPasscode() {
+  const dialog = $('passcode-dialog');
+  onPasscodeNeeded(
+    (wasWrong) =>
+      new Promise((resolve) => {
+        $('passcode-hint').textContent = wasWrong
+          ? "That passcode didn't work. Try again."
+          : "The judges only answer people with your team's passcode.";
+        $('passcode-input').value = '';
+        dialog.onclose = () => resolve(dialog.returnValue === 'ok' ? $('passcode-input').value.trim() : null);
+        dialog.returnValue = '';
+        dialog.showModal();
+      }),
+  );
+}
+
 initSetup();
 initTable();
+initPasscode();
