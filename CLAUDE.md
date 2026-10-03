@@ -1,4 +1,4 @@
-# MockJudge
+# ToughCrowd
 
 For hackathon teams and students who freeze up when judges ask hard questions, our app
 reads your slides and plays realistic judges who question you out loud, then tells you

@@ -27,7 +27,7 @@ function once(fn) {
 
 // ---- Settings, remembered in this browser ------------------------------------------
 
-const SETTINGS_KEY = 'mockjudge.settings';
+const SETTINGS_KEY = 'toughcrowd.settings';
 const settings = loadSettings();
 
 function loadSettings() {
@@ -112,7 +112,7 @@ function problem(message, actions = []) {
 
 // ---- 1. Setup -----------------------------------------------------------------------
 
-const EXAMPLE = `MockJudge: practise for hackathon judging.
+const EXAMPLE = `ToughCrowd: practise for hackathon judging.
 Problem: students freeze when judges ask hard questions, and nobody practises the Q&A.
 Solution: upload your slides; AI judges read them and question you out loud with realistic voices. Answer out loud, then see feedback on what you said and how you said it: filler words, pace and long pauses.
 Judges: an investor, a non-technical grandma, and a skeptical engineer.

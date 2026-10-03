@@ -8,7 +8,7 @@ The rules allow planning in advance. No code or design assets were made before
 
 ## The idea
 
-Picked MockJudge over:
+Picked this idea (first called MockJudge) over:
 
 - **Outfit picker that spots dirty clothes:** a camera can't see sweat or smell, so the
   main feature doesn't work, and scanning 50 items is a bad demo.
@@ -22,7 +22,7 @@ Picked MockJudge over:
 - **Art theft finder:** needs a reverse image search API, and without a real stolen-art
   story or test data on the team, it's generic and hard to demo.
 
-Why MockJudge: we are the users, judges are the target audience, it can be demoed live
+Why this idea: we are the users, judges are the target audience, it can be demoed live
 on the judges, and it uses ElevenLabs for real (ElevenLabs prize).
 
 ## People
@@ -30,8 +30,9 @@ on the judges, and it uses ElevenLabs for real (ElevenLabs prize).
 - **Eric owns the server and presents.** The server is the harder part to explain, and
   judges' "how does it work?" questions are almost all about it.
 - **Luca owns the page.**
-- **Art teammate owns the design, the app name and the pitch slides.** "MockJudge" is a
-  placeholder name. No design assets before noon Saturday.
+- **Art teammate owns the design, the app name and the pitch slides.** The app was called
+  "MockJudge" as a placeholder; renamed to **ToughCrowd** on October 3. No design assets
+  before noon Saturday.
 
 ## Tech
 

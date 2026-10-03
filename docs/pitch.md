@@ -5,7 +5,7 @@ Eric presents. 3 minutes, then 1 minute of judge questions.
 ## Not last year's winner
 
 Last year's winner was an AI co-op interview coach. Say what's different in the first
-20 seconds: interview coaches prepare you for questions about you; MockJudge reads your
+20 seconds: interview coaches prepare you for questions about you; ToughCrowd reads your
 slides and asks the questions judges and investors would ask about your project.
 
 ## Shape
