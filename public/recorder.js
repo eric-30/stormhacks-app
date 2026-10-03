@@ -11,8 +11,8 @@ export async function warmUpMic() {
 }
 
 export class Recorder {
-  // onTick(seconds), onLevel(0..1), onLimit() when MAX_SECONDS is reached
-  async start({ onTick, onLevel, onLimit }) {
+  // onTick(seconds), onLevel(0..1), onLimit() when `limit` seconds are reached
+  async start({ onTick, onLevel, onLimit, limit = MAX_SECONDS }) {
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true },
     });
@@ -42,7 +42,7 @@ export class Recorder {
       onLevel?.(Math.min(1, Math.sqrt(sum / samples.length) * 5));
       const seconds = this.elapsed();
       onTick?.(seconds);
-      if (seconds >= MAX_SECONDS) return onLimit?.();
+      if (seconds >= limit) return onLimit?.();
       this.frame = requestAnimationFrame(loop);
     };
     loop();

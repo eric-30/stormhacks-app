@@ -738,6 +738,29 @@ textarea::placeholder {
   background: var(--red);
 }
 
+
+.pitch-rec {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--red);
+}
+.rec-dot-sm {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: blink 1.2s ease-in-out infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.25;
+  }
+}
+
 /* ---------- The judging table ---------- */
 
 .panel {
@@ -1451,6 +1474,26 @@ mark.filler {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+/* The pitch on the results */
+.pitch-result {
+  margin-bottom: 30px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.pitch-result h2 {
+  padding: 20px 28px 16px;
+  font-size: 24px;
+}
+.pitch-result .report-note {
+  border-top: 1px solid var(--line);
+}
+.results-sub {
+  margin: 0 0 14px;
+  font-size: 24px;
 }
 
 /* ---------- Toast ---------- */

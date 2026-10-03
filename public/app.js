@@ -5,6 +5,7 @@ import { Recorder, warmUpMic, MAX_SECONDS, MAX_BYTES } from './recorder.js';
 import * as voice from './voice.js';
 
 const PITCH_SECONDS = 180;
+const PITCH_RECORD_LIMIT = 240; // keep recording a little over time; still well under 4 MB
 const QA_SECONDS = 60;
 
 const $ = (id) => document.getElementById(id);
@@ -67,6 +68,7 @@ const state = {
 };
 
 const recorder = new Recorder();
+const pitchRecorder = new Recorder();
 const timers = { pitch: 0, qa: 0 };
 const current = () => state.queue[state.index];
 
@@ -403,6 +405,7 @@ async function startSession() {
       toast("Couldn't use your microphone, so you'll type your answers. Allow the mic in Chrome's address bar to speak them.", true);
     }
   }
+  state.pitch = null; // {seconds, transcript, error, pending} once a pitch is recorded
   if (state.rapid) startPitch();
   else startQA();
 }
@@ -416,6 +419,7 @@ function endSession() {
   state.session++;
   voice.stop();
   if (recorder.recording) recorder.stop();
+  if (pitchRecorder.recording) pitchRecorder.stop(); // left mid-pitch: throw it away
   clearInterval(timers.pitch);
   clearInterval(timers.qa);
 }
@@ -433,6 +437,12 @@ function startPitch() {
   $('pitch-bar').style.transform = 'scaleX(1)';
   $('pitch-start').hidden = false;
   $('pitch-done').hidden = true;
+  $('pitch-rec').hidden = true;
+  $('pitch-hint').textContent =
+    state.answerMode === 'voice'
+      ? "Pitch out loud as if the judges were in front of you. Your pitch is recorded, so at the end you'll see its filler words, pace and pauses."
+      : "Pitch out loud as if the judges were in front of you. You're answering by typing, so your pitch isn't recorded.";
+  if (pitchSlides().length) $('pitch-hint').textContent += ' Use the arrow keys to change slides.';
 }
 
 function pitchSlides() {
@@ -449,10 +459,18 @@ function renderPitchSlide() {
   box.innerHTML = `<img src="${slides[state.slideIndex].image}" alt="Slide ${state.slideIndex + 1} of ${slides.length}" />`;
 }
 
-function startPitchClock() {
+async function startPitchClock() {
   $('pitch-start').hidden = true;
   $('pitch-done').hidden = false;
   const session = state.session;
+  if (state.answerMode === 'voice') {
+    try {
+      await pitchRecorder.start({ limit: PITCH_RECORD_LIMIT, onLimit: () => pitchRecorder.stop() });
+      $('pitch-rec').hidden = false;
+    } catch {
+      toast("Couldn't use your microphone, so your pitch isn't being recorded.", true);
+    }
+  }
   const end = performance.now() + PITCH_SECONDS * 1000;
   timers.pitch = setInterval(() => {
     const left = (end - performance.now()) / 1000;
@@ -464,9 +482,27 @@ function startPitchClock() {
     if (left <= 0) {
       clearInterval(timers.pitch);
       toast("Time! The judges have questions.");
-      setTimeout(() => session === state.session && startQA(), 1500);
+      setTimeout(() => session === state.session && finishPitch(), 1500);
     }
   }, 200);
+}
+
+// Stop recording the pitch and transcribe it while the questions start.
+async function finishPitch() {
+  clearInterval(timers.pitch);
+  $('pitch-rec').hidden = true;
+  if (pitchRecorder.recording) {
+    const { blob, seconds } = await pitchRecorder.stop();
+    if (seconds >= 5 && blob.size <= MAX_BYTES) {
+      const pitch = { seconds, transcript: null, error: null };
+      pitch.pending = api.transcribe(blob).then(
+        (t) => (pitch.transcript = t),
+        (e) => (pitch.error = e.message),
+      );
+      state.pitch = pitch;
+    }
+  }
+  startQA();
 }
 
 // ---- 3. The judging table -----------------------------------------------------------
@@ -823,6 +859,37 @@ function lengthTile(seconds, note) {
   return tile('Length', fmtTime(seconds), note ?? defaultNote, rating);
 }
 
+// The recorded 3-minute pitch, shown above the answers on the results.
+function pitchSection() {
+  const pitch = state.pitch;
+  if (!pitch) return '';
+  let body;
+  if (pitch.error) {
+    body = `<p class="report-note">Your pitch couldn't be transcribed: ${esc(pitch.error)}</p>`;
+  } else if (!pitch.transcript?.text?.trim()) {
+    body = '<p class="report-note">No words were heard in your pitch. Check your microphone.</p>';
+  } else {
+    const t = pitch.transcript;
+    const seconds = t.durationSeconds || pitch.seconds;
+    const [note, rating] =
+      seconds > PITCH_SECONDS ? ['Over the 3 minutes. The judges would cut you off.', 'bad']
+      : seconds >= PITCH_SECONDS - 45 ? ['A good use of the 3 minutes.', 'good']
+      : ['Room to spare. Fine, if you covered everything.', 'ok'];
+    body = `
+      <div class="report">
+        ${fillerTile(t.fillers, seconds)}
+        ${paceTile(t.wordsPerMinute)}
+        ${pauseTile(t.longPauses)}
+        ${tile('Length', fmtTime(seconds), note, rating)}
+      </div>
+      <details class="transcript">
+        <summary>What you said</summary>
+        <p>${transcriptHtml(t)}</p>
+      </details>`;
+  }
+  return `<section class="pitch-result"><h2>Your pitch</h2>${body}</section>`;
+}
+
 function deliveryReport(t) {
   if (!t.durationSeconds) {
     return '<p class="report-note">You typed this answer, so there are no delivery numbers. Answer out loud to see filler words, pace and pauses.</p>';
@@ -942,7 +1009,7 @@ function onFeedbackAction(e) {
 // ---- 4. Results ---------------------------------------------------------------------
 
 async function finish() {
-  const pending = state.queue.flatMap((i) => i.attempts.map((a) => a.pending)).filter(Boolean);
+  const pending = [...state.queue.flatMap((i) => i.attempts.map((a) => a.pending)), state.pitch?.pending].filter(Boolean);
   endSession();
   const session = state.session;
   show('results');
@@ -967,7 +1034,7 @@ function renderResults() {
   if (!answered.length) {
     $('results').innerHTML = `
       <div class="results-hero"><div><p class="eyebrow">Verdict</p><h1>No answers yet.</h1>
-      <p>Answer at least one question to get a verdict.</p></div></div>${actions}`;
+      <p>Answer at least one question to get a verdict.</p></div></div>${pitchSection()}${actions}`;
     return;
   }
 
@@ -1030,6 +1097,8 @@ function renderResults() {
         <p>Average score over ${plural(answered.length, 'answer')} from ${plural(new Set(answered.map((i) => i.persona)).size, 'judge')}.</p>
       </div>
     </div>
+    ${pitchSection()}
+    ${state.pitch ? '<h2 class="results-sub">Your answers</h2>' : ''}
     ${totals}
     <ol class="result-list">${rows}</ol>
     ${actions}`;
@@ -1063,7 +1132,7 @@ function initTable() {
   $('end-btn').onclick = finish;
   $('leave-btn').onclick = leave;
   $('pitch-start').onclick = startPitchClock;
-  $('pitch-done').onclick = startQA;
+  $('pitch-done').onclick = finishPitch;
 
   document.addEventListener('keydown', (e) => {
     if (e.target.closest('textarea, input, select, button, summary, a')) return;
