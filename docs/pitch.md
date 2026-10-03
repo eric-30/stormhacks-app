@@ -52,8 +52,12 @@ The four judges: the Investor, the Grandma, the Engineer and the Teacher.
   - Grading (12 calls at about 0.65 cents): about 8 cents.
   - Judge voices (ElevenLabs Flash, about 0.22 credits per character, 12 questions of
     about 130 characters): about 350 credits, roughly 7 cents.
-  - Speech-to-text: not measured yet. Luca's voice tests used about 285 credits; once we
-    know how many seconds he recorded, that gives credits per minute.
+  - Speech-to-text: ElevenLabs charges per second of audio; the rate for our plan isn't
+    measured yet. A session sends about 4 to 5 minutes of audio (full judging round:
+    up to 3 min pitch plus about 1 min of answers; or 6 practice answers of 30 to 45 s;
+    plus up to 2 min if they explain the project out loud). Typed answers send none.
+    Balance was 130,622 at 2:26 PM Saturday, before Luca's first live voice test: the
+    drop after it, minus the voices, gives credits per minute.
   OpenRouter's real spend for all of Saturday's testing was 5 cents.
 - How is this different from InterVU? InterVU asked about you, for a job. ToughCrowd
   reads your slides and a panel asks about your project: four judges, each with their
