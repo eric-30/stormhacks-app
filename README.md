@@ -72,8 +72,8 @@ You need Node 20 or later, and Chrome (recording uses Chrome's MediaRecorder).
 **Without any keys:** open the page with `?mock` at the end of the address. The judges
 give made-up answers, nothing is sent to the server, and no credits are spent.
 
-**Deploy:** push to GitHub; Vercel deploys automatically. Set the same settings in the
-Vercel project's Environment Variables.
+**Deploy:** `npx vercel deploy --prod`. Set the same settings in the Vercel project's
+Environment Variables.
 
 ## Team
 

@@ -2,5 +2,5 @@
   "name": "toughcrowd",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" }
+  "engines": { "node": "22.x" }
 }
