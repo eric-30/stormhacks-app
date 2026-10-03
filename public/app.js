@@ -50,7 +50,8 @@ function saveSettings() {
 // ---- Session state ------------------------------------------------------------------
 
 const state = {
-  source: 'pdf', // 'pdf' or 'text'
+  source: 'pdf', // how the team told the judges: 'pdf', 'voice', 'form' or 'text'
+  explaining: false, // an out-loud explanation is being transcribed
   reading: false, // a PDF is being read
   slides: [], // [{text, image}] from the PDF
   pdfReady: false,
@@ -144,8 +145,10 @@ function initSetup() {
     e.target.value = '';
     if (file) handleFile(file);
   };
-  $('paste-text').oninput = updateStart;
-  $('summary-text').oninput = updateStart;
+  for (const id of ['paste-text', 'summary-text', 'explain-text', ...FORM_FIELDS.map(([id]) => id)]) {
+    $(id).oninput = updateStart;
+  }
+  $('explain-rec').onclick = toggleExplain;
   $('example-btn').onclick = () => {
     $('paste-text').value = EXAMPLE;
     updateStart();
@@ -179,36 +182,139 @@ function initSetup() {
   updateStart();
 }
 
+const SOURCES = ['pdf', 'voice', 'form', 'text'];
+
 function setSource(source) {
+  if (explainRecorder.recording) return;
   state.source = source;
   for (const tab of $$('[data-source]')) tab.setAttribute('aria-selected', tab.dataset.source === source);
-  $('source-pdf').hidden = source !== 'pdf';
-  $('source-text').hidden = source !== 'text';
+  for (const s of SOURCES) $(`source-${s}`).hidden = s !== source;
   $('summary-box').hidden = source !== 'pdf' || !state.pdfReady;
   updateStart();
 }
 
-// Sent as the summary when there are no slides, so the judges ask general questions.
-const NO_SLIDES =
-  "The team didn't share their slides. Ask the general questions judges ask any hackathon " +
-  'team: what the project does, who it is for, why it matters, what was hard to build, ' +
-  'and what they would do next.';
+// The "Describe it" boxes, in the order they go into the summary.
+const FORM_FIELDS = [
+  ['f-name', 'Project name'],
+  ['f-what', 'What it does'],
+  ['f-who', 'Who it is for'],
+  ['f-how', 'How it works'],
+  ['f-hard', 'Hardest part, or what they are proudest of'],
+];
 
+// What the judges know, from whichever way the team chose. Empty means not ready yet.
 function currentSummary() {
-  if (state.source === 'text') return $('paste-text').value.trim();
-  return state.pdfReady ? $('summary-text').value.trim() : '';
+  switch (state.source) {
+    case 'pdf':
+      return state.pdfReady ? $('summary-text').value.trim() : '';
+    case 'voice': {
+      const said = $('explain-text').value.trim();
+      return said ? `The team explained their project out loud (no slides):\n${said}` : '';
+    }
+    case 'form': {
+      if (!$('f-what').value.trim()) return '';
+      const lines = FORM_FIELDS.map(([id, label]) => [label, $(id).value.trim()])
+        .filter(([, value]) => value)
+        .map(([label, value]) => `${label}: ${value}`);
+      return `The team described their project (no slides):\n${lines.join('\n')}`;
+    }
+    default:
+      return $('paste-text').value.trim();
+  }
 }
 
+const NEEDS = {
+  pdf: 'Upload your slides, or tell the judges about your project another way.',
+  voice: 'Record your explanation first.',
+  form: 'Say what your project does first.',
+  text: 'Paste a paragraph about your project first.',
+};
+
 function updateStart() {
+  const hasSummary = currentSummary().length > 0;
   const hasJudges = settings.judges.length > 0;
-  $('start-btn').disabled = state.reading || !hasJudges;
+  const busy = state.reading || state.explaining || explainRecorder.recording;
+  $('start-btn').disabled = busy || !hasSummary || !hasJudges;
   $('start-hint').textContent = state.reading
     ? 'Wait for the judges to finish reading.'
-    : !hasJudges
-      ? 'Pick at least one judge.'
-      : !currentSummary()
-        ? "No slides, so you'll get general questions."
-        : '';
+    : busy
+      ? 'Finish your explanation first.'
+      : !hasSummary
+        ? NEEDS[state.source]
+        : !hasJudges
+          ? 'Pick at least one judge.'
+          : '';
+}
+
+// ---- "Explain out loud": record, transcribe, and let them fix the text ----
+
+const EXPLAIN_SECONDS = 120;
+const explainRecorder = new Recorder();
+
+function explainMsg(text, kind = '') {
+  const el = $('explain-msg');
+  el.hidden = !text;
+  el.className = `status-line ${kind}`;
+  el.innerHTML = (kind === 'busy' ? DOTS : '') + esc(text);
+}
+
+function resetExplainUI() {
+  const btn = $('explain-rec');
+  btn.classList.remove('on');
+  btn.disabled = state.explaining;
+  btn.setAttribute('aria-label', 'Start explaining');
+  $('explain-clock').textContent = '0:00';
+  $('explain-clock').classList.remove('warn');
+  $('explain-hint').textContent = $('explain-text').value.trim()
+    ? 'Press the button to record again. This replaces the text below.'
+    : "In about a minute, say what your project does, who it's for and how it works. Press the button to start.";
+  for (const bar of $$('#explain-meter i')) bar.style.transform = '';
+}
+
+async function toggleExplain() {
+  if (state.explaining) return;
+  if (explainRecorder.recording) return stopExplain();
+  const bars = $$('#explain-meter i');
+  try {
+    await explainRecorder.start({
+      onTick: (s) => {
+        $('explain-clock').textContent = fmtTime(s);
+        $('explain-clock').classList.toggle('warn', s > EXPLAIN_SECONDS - 15);
+        if (s >= EXPLAIN_SECONDS) stopExplain();
+      },
+      onLevel: (level) => showLevel(bars, level),
+    });
+  } catch {
+    return explainMsg("Couldn't use your microphone. Allow it in Chrome's address bar, or describe your project in writing.", 'bad');
+  }
+  $('explain-rec').classList.add('on');
+  $('explain-rec').setAttribute('aria-label', 'Stop recording');
+  $('explain-hint').textContent = `Recording. Press again when you're done (${fmtTime(EXPLAIN_SECONDS)} max).`;
+  explainMsg('');
+  updateStart();
+}
+
+async function stopExplain() {
+  if (state.explaining || !explainRecorder.recording) return;
+  state.explaining = true;
+  const { blob, seconds } = await explainRecorder.stop();
+  resetExplainUI();
+  updateStart();
+  try {
+    if (seconds < 3) throw new Error('That was too short. Take a minute to explain your project.');
+    explainMsg('Writing down what you said…', 'busy');
+    const { text } = await api.transcribe(blob);
+    if (!text?.trim()) throw new Error("We couldn't hear anything. Check your microphone and try again.");
+    $('explain-text').value = text.trim();
+    $('explain-result').hidden = false;
+    explainMsg(`Got it: ${fmtTime(seconds)} of explanation.`, 'ok');
+  } catch (e) {
+    explainMsg(e.message, 'bad');
+  } finally {
+    state.explaining = false;
+    resetExplainUI();
+    updateStart();
+  }
 }
 
 function setSlidesMsg(text, kind = '') {
@@ -286,7 +392,7 @@ function renderJudgePicks() {
 }
 
 async function startSession() {
-  state.summary = currentSummary() || NO_SLIDES;
+  state.summary = currentSummary();
   state.rapid = settings.format === 'judging';
   state.answerMode = settings.answerMode;
   if (state.answerMode === 'voice') {
@@ -529,6 +635,12 @@ async function switchAnswerMode(mode) {
 
 const METER_SHAPE = [0.45, 0.75, 1, 1.2, 1, 0.75, 0.45];
 
+function showLevel(bars, level) {
+  bars.forEach((bar, i) => {
+    bar.style.transform = `scaleY(${Math.min(1, 0.12 + level * METER_SHAPE[i] * (0.8 + Math.random() * 0.4))})`;
+  });
+}
+
 function resetRecordUI() {
   const btn = $('rec-btn');
   btn.classList.remove('on');
@@ -553,11 +665,7 @@ async function toggleRecording() {
         $('rec-clock').textContent = fmtTime(s);
         $('rec-clock').classList.toggle('warn', s > MAX_SECONDS - 20);
       },
-      onLevel: (level) => {
-        bars.forEach((bar, i) => {
-          bar.style.transform = `scaleY(${Math.min(1, 0.12 + level * METER_SHAPE[i] * (0.8 + Math.random() * 0.4))})`;
-        });
-      },
+      onLevel: (level) => showLevel(bars, level),
       onLimit: () => {
         toast("That's the 3-minute limit, so your answer was sent.");
         stopRecording();

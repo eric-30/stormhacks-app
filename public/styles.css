@@ -292,16 +292,76 @@ main {
 .step-head h2 {
   font-size: 24px;
 }
-.optional {
-  padding: 3px 10px;
-  border: 1px solid var(--line);
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-}
 .step-hint {
   margin: -8px 0 16px;
+}
+.seg-wrap {
+  flex-wrap: wrap;
+  border-radius: 22px;
+}
+
+#source-voice,
+#source-form {
+  margin-top: 16px;
+}
+.explain {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+}
+.explain-result {
+  margin-top: 16px;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field-wide {
+  grid-column: 1 / -1;
+}
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.field .field-label {
+  margin-bottom: 0;
+}
+.field-label em {
+  margin-left: 6px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  color: var(--amber);
+}
+input[type='text'],
+.field input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+}
+input[type='text']:focus,
+.field input:focus {
+  outline: none;
+  border-color: var(--amber);
+}
+input[type='text']::placeholder,
+.field input::placeholder {
+  color: var(--faint);
 }
 .step-num {
   display: grid;
@@ -1322,8 +1382,12 @@ mark.filler {
     padding: 20px 16px;
   }
   .judge-picks,
-  .format-picks {
+  .format-picks,
+  .fields {
     grid-template-columns: 1fr;
+  }
+  .explain {
+    padding: 16px;
   }
   .judge-pick {
     flex-direction: row;

@@ -32,19 +32,19 @@
           <p class="eyebrow">Judge Q&amp;A rehearsal</p>
           <h1>Face the judges <em>before</em> you face the judges.</h1>
           <p class="lede">
-            A panel of judges reads your slides and questions you out loud. Then you see how you
+            A panel of judges learns about your project and questions you out loud. Then you see how you
             came across: what you said, and how you said it.
           </p>
         </div>
 
         <ol class="steps">
           <li class="step">
-            <div class="step-head">
-              <span class="step-num">1</span><h2>Your slides</h2><span class="optional">Optional</span>
-            </div>
-            <p class="hint step-hint">The judges ask sharper questions when they've seen your slides. Skip this and they'll ask the questions every hackathon team gets.</p>
-            <div class="seg" role="tablist" aria-label="Slide source">
-              <button role="tab" data-source="pdf" aria-selected="true">Upload PDF</button>
+            <div class="step-head"><span class="step-num">1</span><h2>Your project</h2></div>
+            <p class="hint step-hint">The judges need to know what you built. Upload your slides, or tell them another way.</p>
+            <div class="seg seg-wrap" role="tablist" aria-label="How to tell the judges about your project">
+              <button role="tab" data-source="pdf" aria-selected="true">Upload slides</button>
+              <button role="tab" data-source="voice" aria-selected="false">Explain out loud</button>
+              <button role="tab" data-source="form" aria-selected="false">Describe it</button>
               <button role="tab" data-source="text" aria-selected="false">Paste text</button>
             </div>
 
@@ -61,8 +61,50 @@
               </div>
             </div>
 
+            <div id="source-voice" hidden>
+              <div class="explain">
+                <button id="explain-rec" class="rec-btn" type="button" aria-label="Start explaining"><span class="rec-dot"></span></button>
+                <div class="rec-info">
+                  <div class="rec-top">
+                    <span class="rec-clock" id="explain-clock">0:00</span>
+                    <div class="meter" id="explain-meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                  </div>
+                  <p class="hint" id="explain-hint">In about a minute, say what your project does, who it's for and how it works. Press the button to start.</p>
+                </div>
+              </div>
+              <p class="status-line" id="explain-msg" hidden></p>
+              <div id="explain-result" class="explain-result" hidden>
+                <label class="field-label" for="explain-text">What the judges heard</label>
+                <textarea id="explain-text" rows="6"></textarea>
+                <p class="hint">Fix anything that came out wrong, or record again.</p>
+              </div>
+            </div>
+
+            <div id="source-form" class="fields" hidden>
+              <label class="field field-wide">
+                <span class="field-label">Project name</span>
+                <input id="f-name" placeholder="e.g. MockJudge" />
+              </label>
+              <label class="field field-wide">
+                <span class="field-label">What does it do? <em>Required</em></span>
+                <textarea id="f-what" rows="2" placeholder="In a sentence or two."></textarea>
+              </label>
+              <label class="field">
+                <span class="field-label">Who is it for?</span>
+                <textarea id="f-who" rows="3" placeholder="The people who'd use it, and the problem they have."></textarea>
+              </label>
+              <label class="field">
+                <span class="field-label">How does it work?</span>
+                <textarea id="f-how" rows="3" placeholder="The main pieces and the tech you used."></textarea>
+              </label>
+              <label class="field field-wide">
+                <span class="field-label">What was hardest, or what are you proudest of?</span>
+                <textarea id="f-hard" rows="2"></textarea>
+              </label>
+            </div>
+
             <div id="source-text" hidden>
-              <textarea id="paste-text" rows="8" placeholder="Paste the text from your slides, or a few paragraphs about your project: what it does, who it's for, how it works."></textarea>
+              <textarea id="paste-text" rows="8" placeholder="Paste a paragraph or two about your project: what it does, who it's for, how it works. Text copied from your slides works too."></textarea>
               <button type="button" class="link-btn" id="example-btn">Fill in an example project</button>
             </div>
 

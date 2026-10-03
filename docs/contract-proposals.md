@@ -1,8 +1,20 @@
 # Contract proposals
 
-Proposed by Luca for features 7, 9 and 13. Nothing here is the contract yet. If Eric
+Proposed by Luca: a fourth judge, and features 7, 9 and 13. Nothing here is the contract yet. If Eric
 agrees, copy the change into the contract in `CLAUDE.md`, commit and push it, and only
 then change the code on both sides. Then delete it from this file.
+
+## A fourth judge: `teacher`
+
+`persona` becomes one of four strings: `"business" | "confused" | "technical" | "teacher"`,
+in every request that has one (`/api/questions`, `/api/speak`, `/api/feedback`).
+
+4. `teacher`: a teacher or professor. "What did you learn building this? Walk me through
+   how it works, step by step. Why did you pick this approach over the obvious one?"
+
+The server needs a prompt style and an ElevenLabs voice for it. The page is ready: the
+Teacher's portrait is `public/img/judge-teacher.jpg`, and adding the judge to the page
+is one entry in `public/judges.js` once this is in the contract.
 
 ## Feature 7: shared passcode
 
@@ -65,12 +77,23 @@ can ignore `words`.
 
 ## Not a contract change, just so you know
 
-Slides are now optional on the page. With no slides, the page sends this as `summary`,
-since `/api/questions` needs a non-empty one:
+`summary` isn't always a slide summary any more. A team without a PDF can explain their
+project out loud (the page sends the recording to `/api/transcribe` and uses the text)
+or fill in a few boxes. The page then sends one of these as `summary`:
 
-> The team didn't share their slides. Ask the general questions judges ask any hackathon
-> team: what the project does, who it is for, why it matters, what was hard to build, and
-> what they would do next.
+```
+The team explained their project out loud (no slides):
+<what they said>
+```
 
-The questions prompt says "using details from their slides", and the model handled this
-fine in a test, but you may want the prompt to expect it.
+```
+The team described their project (no slides):
+Project name: ...
+What it does: ...
+Who it is for: ...
+How it works: ...
+Hardest part, or what they are proudest of: ...
+```
+
+The questions and feedback prompts say "The team's slides:", which still worked in tests,
+but you may want them to say "What the team told you about their project:".
