@@ -14,9 +14,10 @@ Last year's winner, InterVU, was an AI mock job interviewer that used ElevenLabs
 what's different in the first 20 seconds. Opening line:
 
 > "Last year's winner prepped you for a job interview about yourself. ToughCrowd preps
-> you for the panel that grills you on your project."
+> you for the panel that's about to tear apart your project."
 
-(Check the ending with Luca: his message was cut off after "preps you for the".)
+A softer ending if that one feels too much: "...preps you for the panel that grills you
+on your project."
 
 ## Who it's for
 
