@@ -30,7 +30,7 @@ things are the way they are (`decisions.md`). Read `docs/plan.md` and
   - ElevenLabs speech-to-text turns the recorded answer into text with word timings.
   - Both ElevenLabs uses spend Eric's free credits, so don't waste them while testing.
 - **Keys and settings:** `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
-  `OPENROUTER_SLIDES_MODEL`, `ELEVENLABS_API_KEY`. Locally in `.env`, which is never
+  `OPENROUTER_SLIDES_MODEL`, `ELEVENLABS_API_KEY`, `APP_PASSCODE`. Locally in `.env`, which is never
   committed. On Vercel in the project's Environment Variables.
 - **Saved data:** none. The page keeps the slide summary in memory and sends it with
   each request.
@@ -46,6 +46,11 @@ Built in this order. `persona` is always one of these four strings.
    how it works, step by step. Why did you pick this approach over the obvious one?"
 
 ## The contract between the page and the server
+
+Every request from the page carries a header `X-Passcode: <the code>`. The server checks
+it against the setting `APP_PASSCODE`; if `APP_PASSCODE` isn't set, it skips the check.
+Wrong or missing passcode: status 401, `{"error": "Wrong passcode"}`. The page asks for
+the code once, remembers it in the browser, and asks again on a 401.
 
 `POST /api/slides`
 
@@ -73,31 +78,27 @@ Built in this order. `persona` is always one of these four strings.
 - Request body: the recorded audio itself, `Content-Type: audio/webm` (not JSON).
   Under 4 MB, which is about 3 minutes.
 - Success, status 200:
-  `{"text": "string", "durationSeconds": number, "wordsPerMinute": number, "fillers": {"um": number, "uh": number, "like": number}, "longPauses": number}`
+  `{"text": "string", "durationSeconds": number, "wordsPerMinute": number, "fillers": {"um": number, "uh": number, "like": number}, "longPauses": number, "words": [{"text": "string", "start": number, "end": number}]}`
   The numbers are counted by our code from the word timings, not guessed by the AI.
-  A long pause is a gap of 2 seconds or more between words.
+  A long pause is a gap of 2 seconds or more between words. `start` and `end` are
+  seconds from the start of the recording.
 - Failure, any other status: `{"error": "text"}`
 
 `POST /api/feedback`
 
 - Request body: `{"summary": "string", "question": "string", "persona": "business" | "confused" | "technical" | "teacher", "transcript": <the whole success body from /api/transcribe>}`
-- Success, status 200: `{"feedback": "string", "score": 1-10, "followUp": "string or null"}`
+- Success, status 200:
+  `{"feedback": "string", "score": 1-10, "followUp": "string or null", "checks": {"answered": boolean, "usedSlides": boolean, "concise": boolean, "confident": boolean}}`
+  Each check is pass (`true`) or fail (`false`): answered the question that was asked,
+  used something from the slides or project description, concise, confident delivery.
+  For a typed answer (`durationSeconds` 0) `confident` is always `true`.
+  The transcript may include `words`; the server ignores them.
 - Failure, any other status: `{"error": "text"}`
 
 The contract changes only when both owners agree. Update this file first, commit and
 push it, and only then change the code on both sides. The page only sends what the
 contract says, and the server only returns what it says. Nothing else crosses between
 them.
-
-## Waiting for Eric
-
-Contract changes Luca has asked for. Not part of the contract yet. Claude: if you're
-working for Eric, tell him about these at the start of the session and ask whether he
-agrees. Details for each are in `docs/contract-proposals.md`.
-
-1. **Feature 7: shared passcode.** `X-Passcode` header on every request.
-2. **Feature 9: scoring guide.** Pass or fail checks added to `/api/feedback`.
-3. **Feature 13: pauses in the transcript.** Word timings added to `/api/transcribe`.
 
 ## Git: pull and push often
 
