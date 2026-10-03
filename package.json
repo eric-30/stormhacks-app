@@ -1,5 +1,5 @@
 {
-  "name": "mockjudge",
+  "name": "toughcrowd",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20" }

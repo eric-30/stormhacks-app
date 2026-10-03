@@ -57,7 +57,7 @@ export async function askModel({ model, system, content, maxTokens = 1200 }) {
     headers: {
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       "Content-Type": "application/json",
-      "X-Title": "MockJudge",
+      "X-Title": "ToughCrowd",
     },
     body: JSON.stringify({
       model,
