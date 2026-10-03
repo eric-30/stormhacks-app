@@ -188,23 +188,26 @@ function setSource(source) {
   updateStart();
 }
 
+// Sent as the summary when there are no slides, so the judges ask general questions.
+const NO_SLIDES =
+  "The team didn't share their slides. Ask the general questions judges ask any hackathon " +
+  'team: what the project does, who it is for, why it matters, what was hard to build, ' +
+  'and what they would do next.';
+
 function currentSummary() {
   if (state.source === 'text') return $('paste-text').value.trim();
   return state.pdfReady ? $('summary-text').value.trim() : '';
 }
 
 function updateStart() {
-  const hasSummary = currentSummary().length > 0;
   const hasJudges = settings.judges.length > 0;
-  $('start-btn').disabled = state.reading || !hasSummary || !hasJudges;
+  $('start-btn').disabled = state.reading || !hasJudges;
   $('start-hint').textContent = state.reading
     ? 'Wait for the judges to finish reading.'
-    : !hasSummary
-      ? state.source === 'pdf'
-        ? 'Add your slides first.'
-        : 'Paste some text about your project first.'
-      : !hasJudges
-        ? 'Pick at least one judge.'
+    : !hasJudges
+      ? 'Pick at least one judge.'
+      : !currentSummary()
+        ? "No slides, so you'll get general questions."
         : '';
 }
 
@@ -283,7 +286,7 @@ function renderJudgePicks() {
 }
 
 async function startSession() {
-  state.summary = currentSummary();
+  state.summary = currentSummary() || NO_SLIDES;
   state.rapid = settings.format === 'judging';
   state.answerMode = settings.answerMode;
   if (state.answerMode === 'voice') {

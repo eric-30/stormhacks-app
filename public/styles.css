@@ -292,6 +292,17 @@ main {
 .step-head h2 {
   font-size: 24px;
 }
+.optional {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.step-hint {
+  margin: -8px 0 16px;
+}
 .step-num {
   display: grid;
   place-items: center;
