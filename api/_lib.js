@@ -24,6 +24,15 @@ export const PERSONAS = {
       "where the data lives, what's actually built versus faked, and what's hard about it.",
     voiceId: "pNInz6obpgDQGcFmaJgB",
   },
+  teacher: {
+    name: "a teacher or professor judge",
+    style:
+      "You care whether they understand what they built. Ask what they learned building it, " +
+      "ask them to walk you through how it works step by step, and ask why they picked their " +
+      "approach over the obvious alternative.",
+    // Alice: premade "Clear, Engaging Educator" voice.
+    voiceId: "Xb7hH8MSUJpSbSDYk0k2",
+  },
 };
 
 export function json(body, status = 200) {
@@ -35,7 +44,7 @@ export function fail(message, status = 400) {
 }
 
 export function checkPersona(persona) {
-  return Object.hasOwn(PERSONAS, persona) ? null : 'persona must be "business", "confused" or "technical"';
+  return Object.hasOwn(PERSONAS, persona) ? null : 'persona must be "business", "confused", "technical" or "teacher"';
 }
 
 export async function readJson(request) {

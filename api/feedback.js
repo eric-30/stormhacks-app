@@ -36,7 +36,7 @@ export async function POST(request) {
         "follow-up question you would ask next; otherwise followUp is null. " +
         'Reply with only JSON: {"feedback": "...", "score": 7, "followUp": "..." or null}',
       content:
-        `The team's slides:\n${summary.slice(0, 20000)}\n\n` +
+        `What the team told you about their project:\n${summary.slice(0, 20000)}\n\n` +
         `Your question: ${question}\n\n` +
         `Their answer (transcribed): ${transcript.text.slice(0, 8000)}\n\n${delivery}`,
     });

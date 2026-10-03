@@ -24,11 +24,12 @@ export async function POST(request) {
       system:
         `You are ${judge.name} at a student hackathon, about to question a team after their pitch. ` +
         `${judge.style} ` +
-        "Write exactly 3 questions about this specific project, using details from their slides. " +
+        "Write exactly 3 questions about this specific project, using details from what they told you. " +
+        "If they gave no details, ask the general questions a judge like you asks any team. " +
         "Each question is one or two short spoken sentences, the way a real judge talks out loud. " +
         "No numbering, no preamble. " +
         'Reply with only JSON: {"questions": ["...", "...", "..."]}',
-      content: `The team's slides:\n\n${summary.slice(0, 20000)}`,
+      content: `What the team told you about their project:\n\n${summary.slice(0, 20000)}`,
     });
     const questions = (result.questions ?? []).filter((q) => typeof q === "string" && q.trim()).slice(0, 3);
     if (questions.length < 3) throw new Error("The model returned fewer than 3 questions");
