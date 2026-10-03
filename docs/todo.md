@@ -5,7 +5,7 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
 
 ## Now: Saturday afternoon
 
-- [ ] **E** Get the app live on Vercel. Set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`
+- [x] **E** Get the app live on Vercel. Set `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`
       (the one from `models.md`), `OPENROUTER_SLIDES_MODEL`, `ELEVENLABS_API_KEY` and
       `APP_PASSCODE`. Put the live URL at the top of `README.md`. Nothing else matters
       if the demo link doesn't work.
@@ -24,8 +24,8 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
 
 - [ ] **All** Devpost by **12:00 AM (Saturday midnight)**: project name ToughCrowd, final
       team, hardware: no. Required for prizes.
-- [ ] **E** Check the ElevenLabs balance (risk 1).
-- [ ] **E** Work out roughly what one round costs in API credits, for the "What does it
+- [x] **E** Check the ElevenLabs balance (risk 1).
+- [x] **E** Work out roughly what one round costs in API credits, for the "What does it
       cost?" question in `pitch.md`.
 - [ ] **L** Test with our real pitch deck, and with a deck that's mostly pictures.
 - [ ] **All** Time one full round at the table: pitch, questions, waits (risk 5).

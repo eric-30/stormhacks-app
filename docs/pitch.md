@@ -11,7 +11,9 @@ not questions about you.
 ## Not last year's winner
 
 Last year's winner, InterVU, was an AI mock job interviewer that used ElevenLabs. Say
-what's different in the first 20 seconds. Opening line:
+what's different in the first 20 seconds, but **don't name InterVU in the pitch**: "last
+year's winner" is enough, and naming them only spends time on someone else's project.
+Use the name only if a judge brings it up. Opening line:
 
 > "Last year's winner prepped you for a job interview about yourself. ToughCrowd preps
 > you for the panel that's about to tear apart your project."
@@ -23,6 +25,8 @@ on your project."
 
 Hackathons, class presentations, capstone and thesis defenses, startup demo days.
 Anywhere a panel questions you on your slides.
+
+The four judges: the Investor, the Grandma, the Engineer and the Teacher.
 
 ## Shape
 
@@ -41,9 +45,16 @@ Anywhere a panel questions you on your slides.
 
 - "We used it to prepare for this judging." Only say it if it's true.
 - How do you know the filler count is right? It comes from the word timings, not the AI.
-- What does it cost? Roughly what one round costs in API credits. Work this out
-  Saturday night. AI calls are about 5 to 10 cents a session; add the ElevenLabs credits
-  measured on one full round.
+- What does it cost? "About 20 cents for a full session with all four judges." Worked out
+  from prices on Saturday, for a session of 12 questions and 12 spoken answers:
+  - Reading the slides once (Gemini 2.5 Flash, 15 images): about 1 cent.
+  - Questions (Claude Sonnet 5.5, 4 calls at about half a cent): about 2 cents.
+  - Grading (12 calls at about 0.65 cents): about 8 cents.
+  - Judge voices (ElevenLabs Flash, about 0.22 credits per character, 12 questions of
+    about 130 characters): about 350 credits, roughly 7 cents.
+  - Speech-to-text: not measured yet. Luca's voice tests used about 285 credits; once we
+    know how many seconds he recorded, that gives credits per minute.
+  OpenRouter's real spend for all of Saturday's testing was 5 cents.
 - How is this different from InterVU? InterVU asked about you, for a job. ToughCrowd
   reads your slides and a panel asks about your project: four judges, each with their
   own angle, who cut in when you ramble.
