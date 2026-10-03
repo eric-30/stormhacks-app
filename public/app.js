@@ -619,6 +619,7 @@ async function ask() {
   $('q-who').innerHTML = esc(JUDGES[item.persona].name) + (item.followUp ? '<span class="q-follow">Follow-up</span>' : '');
   $('q-progress').textContent = `Question ${state.index + 1} of ${state.queue.length}`;
   $('q-text').textContent = item.question;
+  $('voice-error').hidden = true;
   const card = $('question-card');
   card.hidden = false;
   card.style.animation = 'none';
@@ -636,15 +637,23 @@ async function ask() {
   await speakItem(item);
 }
 
+// Speaks a line in the judge's voice. If the realistic voice fails, say why on the
+// question card and use the browser's voice instead, so the judge is still heard.
+async function judgeSays(text, persona, onStart) {
+  try {
+    await voice.speak(text, persona, settings.voiceMode, onStart);
+  } catch (e) {
+    $('voice-error').textContent = `The realistic voice didn't work, so this is the browser's voice. ${e.message}`;
+    $('voice-error').hidden = false;
+    await voice.speak(text, persona, 'browser', onStart);
+  }
+}
+
 async function speakItem(item) {
   setSeats(item.persona, 'thinking');
-  try {
-    await voice.speak(item.question, item.persona, settings.voiceMode, () => {
-      if (!recorder.recording) setSeats(item.persona, 'speaking');
-    });
-  } catch (e) {
-    toast(`The judge's voice didn't work: ${e.message} The question is written above.`, true);
-  }
+  await judgeSays(item.question, item.persona, () => {
+    if (!recorder.recording) setSeats(item.persona, 'speaking');
+  });
   if (current() === item && !state.busy && $('feedback').hidden) setSeats(item.persona, 'listening');
 }
 
@@ -699,9 +708,7 @@ async function interrupt(item) {
   $('interjection').hidden = false;
   $('rec-hint').textContent = `${judge.name} cut in. Listen…`;
   setSeats(item.persona, 'speaking');
-  try {
-    await voice.speak(judge.interrupt, item.persona, settings.voiceMode);
-  } catch {}
+  await judgeSays(judge.interrupt, item.persona);
   if (settings.voiceMode === 'off') await new Promise((r) => setTimeout(r, 2500));
   if (state.cut !== cut || !recorder.paused) return; // they stopped in the meantime
   recorder.resume();
