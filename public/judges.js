@@ -1,0 +1,26 @@
+// The three judges. `persona` is always one of these keys (see CLAUDE.md).
+export const JUDGES = {
+  business: {
+    name: 'The Investor',
+    role: 'Sponsor or investor',
+    sample: 'Who pays for this? Who are your competitors?',
+    img: 'img/judge-business.jpg',
+    browserVoice: { pitch: 0.9, rate: 1.05, pick: 0 },
+  },
+  confused: {
+    name: 'The Grandma',
+    role: 'Not technical at all',
+    sample: "I don't get it. Explain it like I'm your grandma.",
+    img: 'img/judge-confused.jpg',
+    browserVoice: { pitch: 1.25, rate: 0.92, pick: 1 },
+  },
+  technical: {
+    name: 'The Engineer',
+    role: 'Skeptical engineer',
+    sample: 'How does this scale? What if the API is down?',
+    img: 'img/judge-technical.jpg',
+    browserVoice: { pitch: 0.8, rate: 1.1, pick: 2 },
+  },
+};
+
+export const PERSONAS = Object.keys(JUDGES);

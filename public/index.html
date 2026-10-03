@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MockJudge</title>
+    <meta name="description" content="Rehearse the judges' questions before the real ones. Upload your slides, get questioned out loud, see how you came across." />
+    <link rel="icon" href="img/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,500&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <div id="mock-banner" class="mock-banner" hidden>
+      Mock mode: fake server answers, no credits used. <a href="./">Leave mock mode</a>
+    </div>
+
+    <header class="topbar">
+      <a class="brand" href="./" id="brand"><span class="brand-mark" aria-hidden="true"></span>MockJudge</a>
+      <button id="leave-btn" class="btn btn-ghost btn-sm" hidden>Leave session</button>
+    </header>
+
+    <main>
+      <!-- 1. Setup -->
+      <section id="screen-setup" class="screen">
+        <div class="hero">
+          <p class="eyebrow">Judge Q&amp;A rehearsal</p>
+          <h1>Face the judges <em>before</em> you face the judges.</h1>
+          <p class="lede">
+            Upload your slides. A panel of judges reads them and questions you out loud. Then you
+            see how you came across: what you said, and how you said it.
+          </p>
+        </div>
+
+        <ol class="steps">
+          <li class="step">
+            <div class="step-head"><span class="step-num">1</span><h2>Your slides</h2></div>
+            <div class="seg" role="tablist" aria-label="Slide source">
+              <button role="tab" data-source="pdf" aria-selected="true">Upload PDF</button>
+              <button role="tab" data-source="text" aria-selected="false">Paste text</button>
+            </div>
+
+            <div id="source-pdf">
+              <label class="dropzone" id="dropzone">
+                <input type="file" id="pdf-input" accept="application/pdf,.pdf,.pptx,.ppt,.key" hidden />
+                <svg class="dz-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></svg>
+                <span class="dz-title">Drop your deck here, or <u>choose a PDF</u></span>
+                <span class="dz-hint">Up to 15 slides. PowerPoint, Keynote or Google Slides: export as PDF first.</span>
+              </label>
+              <div id="slides-status" class="slides-status" hidden>
+                <div class="thumbs" id="thumbs"></div>
+                <p class="status-line" id="slides-msg"></p>
+              </div>
+            </div>
+
+            <div id="source-text" hidden>
+              <textarea id="paste-text" rows="8" placeholder="Paste the text from your slides, or a few paragraphs about your project: what it does, who it's for, how it works."></textarea>
+              <button type="button" class="link-btn" id="example-btn">Fill in an example project</button>
+            </div>
+
+            <details id="summary-box" class="summary-box" hidden>
+              <summary>What the judges know about your project</summary>
+              <textarea id="summary-text" rows="10" aria-label="Slide summary"></textarea>
+              <p class="hint">This is all the judges see. Fix anything they got wrong.</p>
+            </details>
+          </li>
+
+          <li class="step">
+            <div class="step-head"><span class="step-num">2</span><h2>Pick your panel</h2></div>
+            <div class="judge-picks" id="judge-picks"></div>
+          </li>
+
+          <li class="step">
+            <div class="step-head"><span class="step-num">3</span><h2>How do you want to practise?</h2></div>
+            <div class="format-picks">
+              <label class="format">
+                <input type="radio" name="format" value="practice" />
+                <span class="format-body">
+                  <strong>Q&amp;A practice</strong>
+                  <span>One question at a time, with feedback after each answer. Retry any question.</span>
+                </span>
+              </label>
+              <label class="format">
+                <input type="radio" name="format" value="judging" />
+                <span class="format-body">
+                  <strong>Full judging round</strong>
+                  <span>A 3-minute pitch, then 1 minute of rapid-fire questions. Feedback at the end, like the real thing.</span>
+                </span>
+              </label>
+            </div>
+            <div class="settings">
+              <div class="setting">
+                <span class="setting-label">Answer by</span>
+                <div class="seg small" data-setting="answerMode">
+                  <button data-value="voice">Speaking</button>
+                  <button data-value="type">Typing</button>
+                </div>
+              </div>
+              <div class="setting">
+                <span class="setting-label">Judge voices</span>
+                <div class="seg small" data-setting="voiceMode">
+                  <button data-value="eleven">Realistic</button>
+                  <button data-value="browser">Browser</button>
+                  <button data-value="off">Off</button>
+                </div>
+              </div>
+              <p class="hint">
+                Realistic voices and spoken answers use ElevenLabs credits. For testing, type your
+                answers and use the free browser voice.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="cta-row">
+          <button id="start-btn" class="btn btn-primary btn-lg" disabled>Call in the judges</button>
+          <p id="start-hint" class="hint">Add your slides first.</p>
+        </div>
+      </section>
+
+      <!-- 2. Pitch (full judging round only) -->
+      <section id="screen-pitch" class="screen" hidden>
+        <div class="pitch">
+          <div class="pitch-slide" id="pitch-slide"></div>
+          <aside class="pitch-side">
+            <p class="eyebrow">Your pitch</p>
+            <div class="clock" id="pitch-clock">3:00</div>
+            <div class="bar"><div class="bar-fill" id="pitch-bar"></div></div>
+            <p class="hint" id="pitch-hint">
+              Pitch out loud as if the judges were in front of you. Use the arrow keys to change
+              slides.
+            </p>
+            <button id="pitch-start" class="btn btn-primary">Start the clock</button>
+            <button id="pitch-done" class="btn btn-ghost" hidden>Done, take questions</button>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 3. The judging table -->
+      <section id="screen-table" class="screen" hidden>
+        <div class="panel" id="panel"></div>
+
+        <div class="qa-timer" id="qa-timer" hidden>
+          <span class="qa-label">Q&amp;A</span>
+          <div class="bar"><div class="bar-fill" id="qa-bar"></div></div>
+          <span class="clock-sm" id="qa-clock">1:00</span>
+        </div>
+
+        <div class="table-main">
+          <article class="question-card" id="question-card" hidden>
+            <div class="q-meta">
+              <span id="q-who"></span>
+              <span id="q-progress"></span>
+            </div>
+            <p class="q-text" id="q-text"></p>
+            <button id="replay-btn" class="link-btn">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5" /></svg>
+              Hear it again
+            </button>
+          </article>
+
+          <div class="answer" id="answer-voice" hidden>
+            <button id="rec-btn" class="rec-btn" aria-label="Start answering"><span class="rec-dot"></span></button>
+            <div class="rec-info">
+              <div class="rec-top">
+                <span class="rec-clock" id="rec-clock">0:00</span>
+                <div class="meter" id="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              </div>
+              <p class="hint" id="rec-hint">Press the button or Space, then answer out loud.</p>
+            </div>
+            <button class="link-btn" data-switch="type">Type instead</button>
+          </div>
+
+          <form class="answer answer-type" id="answer-type" hidden>
+            <textarea id="type-text" rows="5" placeholder="Type your answer the way you'd say it."></textarea>
+            <div class="answer-row">
+              <button class="btn btn-primary" type="submit">Submit answer</button>
+              <button type="button" class="link-btn" data-switch="voice">Speak instead</button>
+            </div>
+          </form>
+
+          <div class="working" id="working" hidden>
+            <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span id="working-msg"></span>
+          </div>
+
+          <div class="problem" id="problem" hidden>
+            <p id="problem-msg"></p>
+            <div class="problem-actions" id="problem-actions"></div>
+          </div>
+
+          <section class="feedback" id="feedback" hidden aria-live="polite"></section>
+        </div>
+
+        <div class="table-foot">
+          <button id="end-btn" class="link-btn">End session and see results</button>
+        </div>
+      </section>
+
+      <!-- 4. Results -->
+      <section id="screen-results" class="screen" hidden>
+        <div id="results"></div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
