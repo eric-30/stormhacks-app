@@ -7,8 +7,8 @@ long pauses).
 
 More in `docs/`: build plan (`plan.md`), features in build order (`features.md`), risks
 (`risks.md`), event rules and deadlines (`event.md`), pitch notes (`pitch.md`), why
-things are the way they are (`decisions.md`). Read `docs/plan.md` and
-`docs/features.md` before starting work.
+things are the way they are (`decisions.md`), the team's to-do list (`todo.md`). Read
+`docs/plan.md`, `docs/features.md` and `docs/todo.md` before starting work.
 
 ## Boxes and owners
 
