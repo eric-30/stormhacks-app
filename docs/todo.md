@@ -39,7 +39,7 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
 
 - [x] **E** Point a .tech domain at the app (feature 15, about 15 minutes) for the MLH
       .Tech prize.
-- [ ] **E** Check the ElevenLabs balance again.
+- [x] **E** Check the ElevenLabs balance again. Sunday morning: 129,547 credits; OpenRouter $0.18 of $5.
 - [ ] **All** On the laptop we'll demo on: Chrome, microphone allowed, sound on (risk 8).
       Phone hotspot ready (risk 9).
 - [ ] **All** "We used it to prepare for this judging": only say it if we did. Do one full
