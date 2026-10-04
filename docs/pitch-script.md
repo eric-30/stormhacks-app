@@ -42,14 +42,19 @@ timestamp, and our code is counting the ums."
 ElevenLabs gives them voices and timestamps every word you say, and our own code counts
 the ums, pace and pauses. The AI never guesses those numbers."
 
-## 7 · Why it's new (8 s)
+## 7 · Why it's new (3 s)
 
-"Speaker coaches tell you how you talk. ToughCrowd also questions you on your project."
+Fold it into a few words, or say it during the demo: "Unlike speaker coaches, it
+questions you on your project."
 
-## 8 · What's next (8 s)
+## 8 · The vision (15 to 18 s)
 
-"Next, we take it from one person to a whole event: organizers load their real rubric,
-and every team gets a practice panel before judging."
+"And this isn't just for hackathons. Organizers can give every team a practice panel
+before judging. Founders can rehearse the investor questions before the meeting where one
+bad answer can cost the round. And sales teams can practise the tough customer questions
+before the real call. Anywhere a tough crowd decides what happens next."
+
+Describe the stakes, not a price: "founders will pay a lot" invites "how do you know?"
 
 ## 9 · Thanks (4 s)
 

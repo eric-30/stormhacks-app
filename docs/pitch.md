@@ -55,11 +55,15 @@ First timed run, Saturday 5 PM: 2:23 of talking **without** the demo, 179 words 
 - Live demo, about 75 seconds: see "Demo plan" below.
 - How it works, about 25 seconds: Gemini reads the slides, Claude plays the judges,
   ElevenLabs voices and timestamps, our code counts ums, pace and pauses.
-- Why it's new, about 8 seconds: speaker coaches tell you how you talk; we also question
-  you on your project.
-- What's next, about 8 seconds: "Next, we take it from one person to a whole event:
-  organizers load their real rubric, and every team gets a practice panel before
-  judging." It also answers "who pays?" before anyone asks.
+- Why it's new, a few words or said during the demo: "unlike speaker coaches, it
+  questions you on your project."
+- The vision, about 15 to 18 seconds (Sunday morning): events, founders, sales teams.
+  "Organizers can give every team a practice panel before judging. Founders can rehearse
+  the investor questions before the meeting where one bad answer can cost the round. And
+  sales teams can practise the tough customer questions before the real call. Anywhere a
+  tough crowd decides what happens next." It answers "who pays?" before anyone asks.
+  Describe the stakes, never a price we haven't tested. Sales is furthest from today's
+  app, so keep it last and brief. Slide 8: three cards, Events · Founders · Sales teams.
 
 ## Demo plan
 
