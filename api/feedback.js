@@ -37,14 +37,16 @@ export async function POST(request) {
     : "";
 
   try {
-    const result = await askModel({
+    const request = {
       model: process.env.OPENROUTER_MODEL,
       system:
         `You are ${judge.name}. The occasion is ${occasion}. ${judge.style} ` +
         "You asked the team a question and they answered out loud. Coach them: say in 2 to 4 " +
         "short sentences what worked and the one most important thing to fix, speaking to them " +
         'as "you". Use the delivery numbers if given, but don\'t just repeat them. ' +
-        "Score the answer from 1 to 10, where 5 is an okay answer and 9 or 10 would impress real judges. " +
+        "Score the answer from 1 to 10: 3 means it dodged or didn't answer; 5 means it partly " +
+        "answered or stayed vague; 7 means a clear, direct answer to the question; 8 means " +
+        "clear and specific, with a real detail from the project; 9 or 10 would impress real judges. " +
         `${difficulty.grading} ` +
         "If the answer was vague, dodged the question, or opened an obvious hole, write one short " +
         "follow-up question you would ask next; otherwise followUp is null. " +
@@ -58,9 +60,17 @@ export async function POST(request) {
         `What the team told you about their project:\n${summary.slice(0, 20000)}\n\n` +
         `Your question: ${question}\n\n` +
         `Their answer (transcribed): ${transcript.text.slice(0, 8000)}\n\n${delivery}${cutInNote}`,
-    });
+    };
 
-    const score = Math.min(10, Math.max(1, Math.round(Number(result.score)) || 1));
+    // Models sometimes write the score as "7/10" or leave it out. Read the number, and ask
+    // once more if there isn't one, instead of showing a made-up score.
+    let result = await askModel(request);
+    let score = readScore(result.score);
+    if (score === null) {
+      result = await askModel(request);
+      score = readScore(result.score);
+    }
+    if (score === null) throw new Error("The model returned no score");
     const followUp = typeof result.followUp === "string" && result.followUp.trim() ? result.followUp : null;
     if (typeof result.feedback !== "string") throw new Error("The model returned no feedback");
     const c = result.checks ?? {};
@@ -86,4 +96,10 @@ function splitCutIn(text) {
   const match = text.match(/\n\s*\((The judge cut in[^)]*)\)\s*$/);
   if (!match) return { question: text.trim(), cutIn: null };
   return { question: text.slice(0, match.index).trim(), cutIn: match[1].trim() };
+}
+
+// 7, "7", "7/10" or "7 out of 10" -> 7. Anything else -> null.
+function readScore(value) {
+  const n = typeof value === "number" ? value : Number(String(value ?? "").match(/\d+(\.\d+)?/)?.[0]);
+  return Number.isFinite(n) ? Math.min(10, Math.max(1, Math.round(n))) : null;
 }
