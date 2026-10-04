@@ -47,3 +47,17 @@ on the judges, and it uses ElevenLabs for real (ElevenLabs prize).
   text only, and Vercel can't run conversion tools. Every slide tool exports PDF. pdf.js
   draws each slide as a JPEG in the browser, one `/api/slides` call turns them into a
   summary, and every later request reuses that summary, so it stays fast and cheap.
+
+## Logo
+
+- **Two judges under one question.** `public/img/mark.svg` (and `favicon.svg`, the same
+  mark on a dark rounded square). Two cream judge silhouettes seen from behind, each
+  with two arms, under an amber speech bubble with a question mark. Says "tough crowd"
+  in three shapes and reads at 16px. Replaced the amber dot, which said nothing.
+- **Why it's plain.** Glasses, lapels and suits were tried and dropped: they turn into
+  smudges at favicon size, and every added detail needed cleanup. Personality can go
+  in a larger illustration for the landing page or Devpost, not in the mark.
+- **Why it's an SVG traced from an AI render.** Luca liked a specific Higgsfield (Z
+  Image) render best. The SVG traces that render's shapes exactly so it stays sharp at
+  any size and matches the page's flat style. The render and the rejected variants are
+  kept outside the repo.

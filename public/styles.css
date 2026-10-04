@@ -128,11 +128,9 @@ textarea {
 }
 
 .brand-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 30%, #ffe3b0, var(--amber) 45%, #b06f1d);
-  box-shadow: 0 0 18px rgba(242, 180, 90, 0.55);
+  width: 28px;
+  height: 28px;
+  background: url('img/mark.svg') center / contain no-repeat;
 }
 
 main {
