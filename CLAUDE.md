@@ -97,8 +97,10 @@ the code once, remembers it in the browser, and asks again on a 401.
 
 `POST /api/transcribe`
 
-- Request body: the recorded audio itself, `Content-Type: audio/webm` (not JSON).
-  Under 4 MB, which is about 3 minutes.
+- Request body: the audio itself (not JSON), under 4 MB. Either recorded on the page,
+  `Content-Type: audio/webm` (about 3 minutes), or a file the person uploaded instead of
+  speaking, sent with the file's own type: `audio/mpeg`, `audio/mp4` (also `audio/x-m4a`),
+  `audio/wav`, `audio/ogg` or `audio/webm`.
 - Success, status 200:
   `{"text": "string", "durationSeconds": number, "wordsPerMinute": number, "fillers": {"um": number, "uh": number, "like": number}, "longPauses": number, "words": [{"text": "string", "start": number, "end": number}]}`
   The numbers are counted by our code from the word timings, not guessed by the AI.
@@ -131,6 +133,8 @@ agrees. Details are in `docs/contract-proposals.md`.
 1. **A back-and-forth with each judge.** Optional `conversation` and `followUpsLeft` on
    `/api/feedback`, and `reply` (what the judge says out loud) and `satisfied` in its
    response. The page already works without them, using `followUp` and `feedback`.
+   **Eric, Saturday 8 PM: not now.** Too many features; the only new one is uploading
+   audio instead of speaking. The server ignores these fields.
 
 ## Git: pull and push often
 
