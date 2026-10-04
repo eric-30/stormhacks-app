@@ -82,15 +82,18 @@ use earbuds with a microphone.
 - Laptop B, Chrome, sound on and loud enough, microphone allowed, phone hotspot on.
 - https://toughcrowd.tech open, passcode already entered.
 - This deck already uploaded and the slide summary ready, so no waiting for slides.
-- Settings (Sunday morning decision): **one judge, the Teacher**, difficulty
-  **Realistic**, **Judges interrupt off**, realistic voices, practice mode. The Teacher's
-  "what did you learn / walk me through it" questions are ones Eric can answer well, and
-  a good answer is a better demo than getting crushed on Brutal. On Realistic the judge
-  would wait 45 seconds to cut in, too long for the demo.
+- Settings (Sunday morning decision): **one judge, the Grandma**, difficulty
+  **Realistic**, **Judges interrupt off**, realistic voices, practice mode. Her questions
+  are the most predictable ("what does it actually do?", "who is it for?") and Eric's
+  10-second answer covers them; she's also funny. Brutal and the Teacher risked questions
+  that are hard to answer on the spot. On Realistic the judge would wait 45 seconds to
+  cut in, too long for the demo. Run the Grandma 3 or 4 times beforehand to see her range.
+- If the answer goes badly anyway: smile and say "Well, that's why we built it." The
+  judges are scoring the app, and sharp coaching on a weak answer proves it works.
 - Close every other tab and notification.
 
 **At the table (about 60 seconds):**
-1. (0:00) "Let's try it on this exact deck." Darren starts. The Teacher asks a question
+1. (0:00) "Let's try it on this exact deck." Darren starts. The Grandma asks a question
    out loud about the deck.
 2. (0:08) Eric answers in 20 to 30 seconds at a calm pace. Darren stops the recording.
 3. (0:40) While it grades (a few seconds), say: "It's transcribing every word with a
