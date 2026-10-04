@@ -36,7 +36,7 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
 
 ## Sunday morning, before 10 AM
 
-- [ ] **E** Point a .tech domain at the app (feature 15, about 15 minutes) for the MLH
+- [x] **E** Point a .tech domain at the app (feature 15, about 15 minutes) for the MLH
       .Tech prize.
 - [ ] **E** Check the ElevenLabs balance again.
 - [ ] **All** On the laptop we'll demo on: Chrome, microphone allowed, sound on (risk 8).
