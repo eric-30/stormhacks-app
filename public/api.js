@@ -9,9 +9,15 @@ export class ApiError extends Error {}
 // ---- Passcode: sent with every request, asked for when the server says 401 ----------
 
 const PASSCODE_KEY = 'toughcrowd.passcode';
+// The passcode box hides what you type, and keyboards capitalise the first letter or turn
+// "-" into "–". A "–" can't even be sent in a header (fetch throws), so clean the code
+// before keeping it. The server compares it the same way.
+const cleanPasscode = (code) =>
+  code.toLowerCase().replace(/[\u2010-\u2015\u2212]/g, '-').replace(/\s+/g, '').replace(/[^\x20-\x7e]/g, '');
+
 let passcode = '';
 try {
-  passcode = localStorage.getItem(PASSCODE_KEY) || '';
+  passcode = cleanPasscode(localStorage.getItem(PASSCODE_KEY) || '');
 } catch {}
 
 let askForPasscode = null; // set by the page: (wasWrong) => Promise<code or null>
@@ -22,9 +28,9 @@ export function onPasscodeNeeded(ask) {
 }
 
 function savePasscode(code) {
-  passcode = code;
+  passcode = cleanPasscode(code);
   try {
-    localStorage.setItem(PASSCODE_KEY, code);
+    localStorage.setItem(PASSCODE_KEY, passcode);
   } catch {}
 }
 
@@ -42,7 +48,7 @@ async function post(path, init, as = 'json') {
     asking ??= askForPasscode(Boolean(sent)).finally(() => (asking = null));
     const code = await asking;
     if (!code) throw new ApiError('The judges need the passcode. Ask your team for it.');
-    if (code !== passcode) savePasscode(code);
+    if (cleanPasscode(code) !== passcode) savePasscode(code);
   }
   if (!res.ok) {
     let message = '';

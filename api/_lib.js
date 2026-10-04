@@ -127,8 +127,16 @@ export function fail(message, status = 400) {
 // With no APP_PASSCODE set (local testing), every request may go on.
 export function checkPasscode(request) {
   const expected = process.env.APP_PASSCODE;
-  if (!expected || request.headers.get("x-passcode") === expected) return null;
+  if (!expected) return null;
+  const given = request.headers.get("x-passcode") ?? "";
+  if (normalizePasscode(given) === normalizePasscode(expected)) return null;
   return fail("Wrong passcode", 401);
+}
+
+// The passcode box hides what you type, and phones capitalise the first letter or turn
+// "-" into "–". Ignore capitals, spaces and the kind of dash.
+function normalizePasscode(code) {
+  return code.toLowerCase().replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, "");
 }
 
 export function checkPersona(persona) {
