@@ -723,6 +723,23 @@ async function finishPitch() {
   startQA();
 }
 
+// A pitch recorded earlier, uploaded instead of pitching live: handy for demos.
+async function uploadPitch(file) {
+  if (!file) return;
+  if (file.size > MAX_BYTES) return toast('That file is over 4 MB. Use a shorter recording, or an mp3 or m4a.', true);
+  clearInterval(timers.pitch);
+  $('pitch-rec').hidden = true;
+  if (pitchRecorder.recording) await pitchRecorder.stop(); // drop the live recording
+  const pitch = { seconds: 0, transcript: null, error: null };
+  pitch.pending = api.transcribe(file).then(
+    (t) => (pitch.transcript = t),
+    (e) => (pitch.error = e.message),
+  );
+  state.pitch = pitch;
+  toast('Got your recorded pitch. The judges have questions.');
+  startQA();
+}
+
 // ---- 3. The judging table -----------------------------------------------------------
 
 function renderPanel() {
@@ -1024,6 +1041,15 @@ async function stopRecording() {
   if (seconds < 1.5) return toast('That was too short. Press the button, answer, then press it again.');
   if (blob.size > MAX_BYTES) return toast('That recording is too big to send. Keep answers under 3 minutes.', true);
   submit(once(() => api.transcribe(blob)), { cutAt: cut?.at });
+}
+
+// An audio file instead of speaking: same transcript, fillers, pace and pauses.
+function uploadAnswer(file) {
+  if (!file || state.busy || state.stopping || recorder.recording || !current()) return;
+  if (file.size > MAX_BYTES) return toast('That file is over 4 MB. Use a shorter recording, or an mp3 or m4a.', true);
+  voice.stop();
+  $('interjection').hidden = true;
+  submit(once(() => api.transcribe(file)));
 }
 
 // A typed answer gets the same shape as /api/transcribe's answer. durationSeconds 0
@@ -1634,6 +1660,18 @@ function initTable() {
   $('leave-btn').onclick = leave;
   $('pitch-start').onclick = startPitchClock;
   $('pitch-done').onclick = finishPitch;
+  // Upload audio instead of speaking. Clearing the value lets the same file be picked again.
+  const onFile = (input, handle) => {
+    $(input).onchange = (e) => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      handle(file);
+    };
+  };
+  $('upload-answer-btn').onclick = () => $('answer-file').click();
+  onFile('answer-file', uploadAnswer);
+  $('pitch-upload-btn').onclick = () => $('pitch-file').click();
+  onFile('pitch-file', uploadPitch);
 
   document.addEventListener('keydown', (e) => {
     if (e.target.closest('textarea, input, select, button, summary, a')) return;

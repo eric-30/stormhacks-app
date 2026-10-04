@@ -267,6 +267,8 @@
             <p class="hint" id="pitch-hint"></p>
             <button id="pitch-start" class="btn btn-primary">Start the clock</button>
             <button id="pitch-done" class="btn btn-ghost" hidden>Done, take questions</button>
+            <button id="pitch-upload-btn" class="link-btn pitch-upload" type="button">Or upload a recorded pitch</button>
+            <input type="file" id="pitch-file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" hidden />
           </aside>
         </div>
       </section>
@@ -312,7 +314,11 @@
               </div>
               <p class="hint" id="rec-hint">Press the button or Space, then answer out loud.</p>
             </div>
-            <button class="link-btn" data-switch="type">Type instead</button>
+            <div class="answer-alt">
+              <button class="link-btn" data-switch="type">Type instead</button>
+              <button class="link-btn" id="upload-answer-btn" type="button">Upload audio</button>
+            </div>
+            <input type="file" id="answer-file" accept="audio/*,.mp3,.m4a,.wav,.ogg,.webm" hidden />
           </div>
 
           <form class="answer answer-type" id="answer-type" hidden>

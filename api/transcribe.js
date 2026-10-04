@@ -1,6 +1,20 @@
 import { json, fail, checkPasscode } from "./_lib.js";
 
 const MAX_BYTES = 4 * 1024 * 1024;
+
+// Recorded on the page (webm), or a file uploaded instead of speaking.
+const EXTENSIONS = {
+  "audio/webm": "webm",
+  "audio/mpeg": "mp3",
+  "audio/mp3": "mp3",
+  "audio/mp4": "m4a",
+  "audio/x-m4a": "m4a",
+  "audio/m4a": "m4a",
+  "audio/wav": "wav",
+  "audio/x-wav": "wav",
+  "audio/wave": "wav",
+  "audio/ogg": "ogg",
+};
 const LONG_PAUSE_SECONDS = 2;
 
 export async function POST(request) {
@@ -9,9 +23,15 @@ export async function POST(request) {
 
   if (!process.env.ELEVENLABS_API_KEY) return fail("ELEVENLABS_API_KEY is not set", 500);
 
+  // "audio/webm;codecs=opus" -> "audio/webm"
+  const type = (request.headers.get("content-type") || "audio/webm").split(";")[0].trim().toLowerCase();
+  if (!Object.hasOwn(EXTENSIONS, type)) {
+    return fail("That audio format isn't supported. Use an mp3, m4a, wav, ogg or webm file.", 415);
+  }
+
   const audio = await request.arrayBuffer();
   if (audio.byteLength === 0) return fail("No audio in the request body");
-  if (audio.byteLength > MAX_BYTES) return fail("Recording is too long, keep it under about 3 minutes", 413);
+  if (audio.byteLength > MAX_BYTES) return fail("That audio is over 4 MB. Keep recordings under about 3 minutes, or upload a smaller file (an mp3 or m4a).", 413);
 
   const form = new FormData();
   form.append("model_id", "scribe_v2");
@@ -20,8 +40,7 @@ export async function POST(request) {
   form.append("tag_audio_events", "false");
   // Keep "um" and "uh" in the transcript; we count them.
   form.append("no_verbatim", "false");
-  const type = request.headers.get("content-type") || "audio/webm";
-  form.append("file", new Blob([audio], { type }), "answer.webm");
+  form.append("file", new Blob([audio], { type }), `answer.${EXTENSIONS[type]}`);
 
   const res = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
     method: "POST",

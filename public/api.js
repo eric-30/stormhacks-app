@@ -74,6 +74,15 @@ const judgeFields = (judge, scene) => ({
   ...(scene.setting === 'custom' ? { settingDescription: scene.settingDescription } : {}),
 });
 
+// The type to send for a recording or an uploaded file. Some files come with no type,
+// so fall back to the file name's extension.
+const AUDIO_TYPES = { mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', webm: 'audio/webm' };
+function audioType(audio) {
+  if (audio.type) return audio.type.split(';')[0];
+  const ext = (audio.name || '').split('.').pop().toLowerCase();
+  return AUDIO_TYPES[ext] || 'audio/webm';
+}
+
 const real = {
   // slides: [{text, image}] -> summary string
   slides: (slides) => post('/api/slides', json({ slides })).then((r) => r.summary),
@@ -83,8 +92,9 @@ const real = {
   // -> audio/mpeg Blob
   speak: (text, persona) => post('/api/speak', json({ text, persona }), 'blob'),
   // audio/webm Blob -> {text, durationSeconds, wordsPerMinute, fillers, longPauses, words}
+  // audio: a recorded Blob (audio/webm) or an uploaded File, sent with its own type.
   transcribe: (audio) =>
-    post('/api/transcribe', { headers: { 'Content-Type': 'audio/webm' }, body: audio }),
+    post('/api/transcribe', { headers: { 'Content-Type': audioType(audio) }, body: audio }),
   // talk: {conversation: [{question, answer}], followUpsLeft} in a back-and-forth, else null.
   // -> {feedback, score, followUp, checks, reply?, satisfied?}
   feedback: (summary, question, judge, transcript, scene, talk = null) =>
