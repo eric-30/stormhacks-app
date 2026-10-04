@@ -21,6 +21,17 @@ Use the name only if a judge brings it up. Opening line:
 A softer ending if that one feels too much: "...preps you for the panel that grills you
 on your project."
 
+## Why it matters (mentors: sell this harder)
+
+- **The gap:** "Everyone practises the pitch. Nobody practises the questions, because
+  there's no one to ask them." Make this line land.
+- **Who hurts:** first-time hackers, students in class presentations, anyone defending a
+  thesis, non-native speakers. The people who freeze aren't the ones with bad ideas.
+- **What's at stake:** grades, prizes, scholarships, funding. A good project loses in one
+  minute of Q&A.
+- Don't invent statistics. Our real case competition story plus a clear "who and why" is
+  stronger than a made-up number.
+
 ## Who it's for
 
 Hackathons, class presentations, capstone and thesis defenses, startup demo days.
@@ -52,10 +63,19 @@ First timed run, Saturday 5 PM: 2:23 of talking **without** the demo, 179 words 
 
 ## Demo plan
 
-About 75 seconds. Eric talks; Darren drives the laptop, so Eric can face the judges.
+**Judging is at our table** (a mentor confirmed): judges come to us and watch on our
+laptops, no projector. Use two laptops: **laptop A shows the slides**, facing the judges,
+and Eric presents from it; **laptop B runs ToughCrowd**, and Darren drives it.
 
-**Set up before walking to the table (nothing is typed live):**
-- Demo laptop, Chrome, sound on and loud enough, microphone allowed, phone hotspot on.
+About 75 seconds. Eric talks and faces the judges; Darren clicks.
+
+**The cafeteria will be loud.** Before judging, test one recording at our table: is the
+judge's voice loud enough (volume to max, a small speaker if anyone has one), and do
+neighbours' voices end up in the transcript? If they do, hold laptop B closer to Eric, or
+use earbuds with a microphone.
+
+**Set up before the judges arrive (nothing is typed live):**
+- Laptop B, Chrome, sound on and loud enough, microphone allowed, phone hotspot on.
 - The app open on https://toughcrowd.tech (or the vercel.app link if the domain acts up),
   passcode already entered.
 - This deck already uploaded and the slide summary ready, so no waiting for slides.
@@ -78,6 +98,9 @@ About 75 seconds. Eric talks; Darren drives the laptop, so Eric can face the jud
 **If something breaks:** say it calmly and keep going. "Live Wi-Fi, so here's one we ran
 earlier." Have screenshots of a finished result open in another window, and the demo
 video ready. If only the voice fails, the question still shows as text: read it out.
+
+**Optional, only if we're under time and a judge seems curious:** "Want to try it? Answer
+one question." Turn laptop B toward them.
 
 **Rehearse it 3 times tonight** with the real setup, timing each run.
 
