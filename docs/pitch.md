@@ -80,24 +80,24 @@ use earbuds with a microphone.
 
 **Set up before the judges arrive (nothing is typed live):**
 - Laptop B, Chrome, sound on and loud enough, microphone allowed, phone hotspot on.
-- The app open on https://toughcrowd.tech (or the vercel.app link if the domain acts up),
-  passcode already entered.
+- https://toughcrowd.tech open, passcode already entered.
 - This deck already uploaded and the slide summary ready, so no waiting for slides.
-- Settings: **one judge, the Engineer**, difficulty **Brutal**, **Judges interrupt** on,
-  realistic voices, practice mode (not the full judging round).
+- Settings (Sunday morning decision): **one judge, the Teacher**, difficulty
+  **Realistic**, **Judges interrupt off**, realistic voices, practice mode. The Teacher's
+  "what did you learn / walk me through it" questions are ones Eric can answer well, and
+  a good answer is a better demo than getting crushed on Brutal. On Realistic the judge
+  would wait 45 seconds to cut in, too long for the demo.
 - Close every other tab and notification.
 
-**On the table:**
-1. (0:00) "Let's try it on this exact deck." Darren starts. The Engineer asks a question
-   out loud. Brutal makes it sharp.
-2. (0:08) Eric answers and keeps going on purpose: a long, "um"-heavy ramble.
-3. (0:33) On Brutal the judge cuts in at 25 seconds. Stop, let the room react, then wrap
-   up in one sentence. Darren stops the recording.
-4. (0:45) While it grades (a few seconds), say: "It's transcribing every word with a
+**At the table (about 60 seconds):**
+1. (0:00) "Let's try it on this exact deck." Darren starts. The Teacher asks a question
+   out loud about the deck.
+2. (0:08) Eric answers in 20 to 30 seconds at a calm pace. Darren stops the recording.
+3. (0:40) While it grades (a few seconds), say: "It's transcribing every word with a
    timestamp, and our code is counting the ums."
-5. (0:55) Show the result: point at the score, the failed "Concise" check, and the "um"s
-   in red in the transcript. "The judge cut me off, and it noticed."
-6. (1:15) Back to the slides.
+4. (0:45) Point at the score, the four checks and any "um"s in red. Mention in one line:
+   "Judges can even cut you off if you ramble, like a real moderator."
+5. (1:00) Back to the slides.
 
 **If something breaks:** say it calmly and keep going. "Live Wi-Fi, so here's one we ran
 earlier." Have screenshots of a finished result open in another window, and the demo
