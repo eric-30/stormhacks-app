@@ -120,6 +120,11 @@ const state = {
   timeUp: false,
   session: 0, // bumped whenever a session starts or ends, so stale work is ignored
   slideIndex: 0,
+  slideCount: 0, // how many slides were read, so a refresh can still say so
+  slidesName: '',
+  recorded: false, // this session's score is already in the history
+  qaEndsAt: 0, // wall-clock end of the Q&A, so a refresh can keep the clock honest
+  setupRestored: false, // don't save the setup over what was kept until it's been read back
 };
 
 const recorder = new Recorder();
@@ -248,6 +253,7 @@ function initSetup() {
     store(HISTORY_KEY, []);
     renderHistory();
   };
+  restoreSetup();
   updateStart();
 }
 
@@ -316,6 +322,7 @@ function updateStart() {
           : !hasOccasion
             ? "Say what you're practising for in step 3."
             : '';
+  saveSetup();
 }
 
 // ---- "Explain out loud": record, transcribe, and let them fix the text ----
@@ -424,6 +431,8 @@ async function handleFile(file) {
     setSlidesMsg(`The judges are studying ${plural(used, 'slide')}, pictures included…`, 'busy');
     const summary = await api.slides(slides);
     state.slides = slides;
+    state.slideCount = used;
+    state.slidesName = file.name;
     $('summary-text').value = summary;
     state.pdfReady = true;
     $('summary-box').hidden = false;
@@ -600,6 +609,8 @@ function syncScene() {
 }
 
 async function startSession() {
+  forget(SESSION_KEY);
+  state.recorded = false;
   state.summary = currentSummary();
   state.judges = settings.judges.filter((id) => judgeById(id));
   state.scene = { difficulty: settings.difficulty, setting: settings.occasion };
@@ -624,6 +635,7 @@ async function startSession() {
 
 function leave() {
   endSession();
+  forget(SESSION_KEY);
   renderHistory();
   show('setup');
 }
@@ -811,10 +823,12 @@ async function startQA() {
   ask();
 }
 
-function startQaClock() {
+// seconds: how long is left; the full Q&A time unless picking up after a refresh.
+function startQaClock(seconds = state.qaSeconds) {
   $('qa-timer').hidden = false;
   $('qa-clock').classList.remove('over');
-  const end = performance.now() + state.qaSeconds * 1000;
+  state.qaEndsAt = Date.now() + seconds * 1000;
+  const end = performance.now() + seconds * 1000;
   timers.qa = setInterval(() => {
     const left = (end - performance.now()) / 1000;
     const kind = left <= 0 ? ' over' : left <= 15 ? ' warn' : '';
@@ -857,6 +871,7 @@ async function ask() {
   const item = current();
   if (!item) return finish();
   item.thread = null;
+  saveSession();
   clearTable();
   showQuestion(item);
   renderThread(item);
@@ -1065,7 +1080,7 @@ function submit(getTranscript, extra = {}) {
 
   if (state.rapid) {
     // Like the real thing: straight on to the next question, grades come at the end.
-    attempt.pending = run().catch(drop);
+    attempt.pending = run().then(() => saveSession(), drop);
     return next();
   }
 
@@ -1083,6 +1098,7 @@ function submit(getTranscript, extra = {}) {
       state.busy = false;
       working(false);
       renderFeedback(item);
+      saveSession();
     },
     (e) => {
       drop();
@@ -1161,6 +1177,7 @@ async function submitTurn(getTranscript, extra) {
   thread.turns.push(turn);
   state.busy = false;
   working(false);
+  saveSession();
 
   const { reply, followUp } = turn.result;
   if (followUp && followUpsLeft > 0) {
@@ -1187,6 +1204,7 @@ async function submitTurn(getTranscript, extra) {
     pending: null,
   });
   item.thread = null;
+  saveSession();
   showQuestion(item); // back to the question the conversation started from
   renderThread(item);
   renderFeedback(item);
@@ -1446,6 +1464,7 @@ function onFeedbackAction(e) {
     voice.stop();
     $('feedback').hidden = true;
     item.thread = null; // a back-and-forth starts again from the first question
+    saveSession();
     showQuestion(item);
     renderThread(item);
     setSeats(item.judge, 'listening');
@@ -1473,6 +1492,7 @@ async function finish() {
     if (session !== state.session) return;
   }
   renderResults();
+  saveSession();
 }
 
 function renderResults() {
@@ -1502,7 +1522,10 @@ function renderResults() {
     : "Rough round. That's what practice is for.";
 
   const spoken = latest.map((a) => a.transcript).filter((t) => t.durationSeconds > 0);
-  saveHistory(average, latest.length, spoken);
+  if (!state.recorded) {
+    saveHistory(average, latest.length, spoken);
+    state.recorded = true; // a refresh of this page mustn't count the round twice
+  }
   let totals = '';
   if (spoken.length) {
     const seconds = spoken.reduce((s, t) => s + t.durationSeconds, 0);
@@ -1611,6 +1634,193 @@ function onResultsAction(e) {
   else if (action === 'setup') leave();
 }
 
+// ---- Picking up after a refresh ------------------------------------------------------
+// The setup and the session are kept in this browser, so closing or refreshing the tab
+// doesn't throw the round away. Slide images and recordings are not kept: they're big,
+// and the judges only ever needed the summary. Answers still being graded at the moment
+// of the refresh are lost, and the person answers that question again.
+
+const SETUP_KEY = 'toughcrowd.setup';
+const SESSION_KEY = 'toughcrowd.session';
+const SAVE_VERSION = 1;
+const SAVE_LIMIT = 1_500_000; // characters; well under what browsers allow per site
+
+function forget(key) {
+  try {
+    localStorage.removeItem(key);
+  } catch {}
+}
+
+function saveSetup() {
+  if (!state.setupRestored) return;
+  store(SETUP_KEY, {
+    v: SAVE_VERSION,
+    source: state.source,
+    pdfReady: state.pdfReady,
+    slideCount: state.slideCount,
+    slidesName: state.slidesName,
+    summary: $('summary-text').value,
+    explain: $('explain-text').value,
+    paste: $('paste-text').value,
+    form: Object.fromEntries(FORM_FIELDS.map(([id]) => [id, $(id).value])),
+  });
+}
+
+function restoreSetup() {
+  const saved = load(SETUP_KEY, null);
+  state.setupRestored = true;
+  if (saved?.v !== SAVE_VERSION) return;
+  $('summary-text').value = typeof saved.summary === 'string' ? saved.summary : '';
+  $('explain-text').value = typeof saved.explain === 'string' ? saved.explain : '';
+  $('paste-text').value = typeof saved.paste === 'string' ? saved.paste : '';
+  for (const [id] of FORM_FIELDS) $(id).value = typeof saved.form?.[id] === 'string' ? saved.form[id] : '';
+  if ($('explain-text').value.trim()) {
+    $('explain-result').hidden = false;
+    resetExplainUI();
+  }
+  if (saved.pdfReady && $('summary-text').value.trim()) {
+    state.pdfReady = true;
+    state.slideCount = Number(saved.slideCount) || 0;
+    state.slidesName = typeof saved.slidesName === 'string' ? saved.slidesName : '';
+    $('slides-status').hidden = false;
+    const what = state.slideCount ? `${state.slidesName || 'Your deck'}: ${plural(state.slideCount, 'slide')} read earlier.` : 'Your slides were read earlier.';
+    setSlidesMsg(`${what} The judges still have the summary below. Drop the PDF in again to show the slides during a pitch.`, 'ok');
+  }
+  setSource(SOURCES.includes(saved.source) ? saved.source : 'pdf');
+}
+
+// Which screen is up: 'setup', 'pitch', 'table' or 'results'.
+const currentScreen = () => ['setup', 'pitch', 'table', 'results'].find((s) => !$(`screen-${s}`).hidden);
+
+// A graded answer, without the promise that fetched it.
+function attemptData(a) {
+  return { transcript: a.transcript, result: a.result, cutAt: a.cutAt ?? null, verdict: a.verdict ?? null, turns: a.turns ?? null };
+}
+
+function saveSession() {
+  const screen = currentScreen();
+  if (screen !== 'table' && screen !== 'results') return forget(SESSION_KEY);
+  const data = {
+    v: SAVE_VERSION,
+    at: Date.now(),
+    screen,
+    summary: state.summary,
+    judges: state.judges,
+    scene: state.scene,
+    pitchSeconds: state.pitchSeconds,
+    qaSeconds: state.qaSeconds,
+    qaEndsAt: state.qaEndsAt,
+    rapid: state.rapid,
+    conversation: state.conversation,
+    answerMode: state.answerMode,
+    index: state.index,
+    timeUp: state.timeUp,
+    recorded: state.recorded,
+    pitch: state.pitch ? { seconds: state.pitch.seconds, transcript: state.pitch.transcript, error: state.pitch.error } : null,
+    queue: state.queue.map((i) => ({
+      judge: i.judge,
+      question: i.question,
+      followUp: i.followUp,
+      thread: i.thread?.turns?.length ? { question: i.thread.question, reply: i.thread.reply ?? null, turns: i.thread.turns } : null,
+      attempts: i.attempts.filter((a) => a.result && a.transcript).map(attemptData),
+    })),
+  };
+  let text = JSON.stringify(data);
+  if (text.length > SAVE_LIMIT) {
+    // Too big: drop the word timings (only used to show pauses) and keep the rest.
+    const strip = (t) => (t && Array.isArray(t.words) ? { ...t, words: [] } : t);
+    for (const i of data.queue) {
+      for (const a of i.attempts) {
+        a.transcript = strip(a.transcript);
+        if (a.turns) a.turns = a.turns.map((t) => ({ ...t, transcript: strip(t.transcript) }));
+      }
+      if (i.thread) i.thread.turns = i.thread.turns.map((t) => ({ ...t, transcript: strip(t.transcript) }));
+    }
+    if (data.pitch) data.pitch.transcript = strip(data.pitch.transcript);
+    text = JSON.stringify(data);
+  }
+  try {
+    localStorage.setItem(SESSION_KEY, text);
+  } catch {}
+}
+
+// Back to the question or the results the person was looking at. True if there was
+// a session to pick up.
+function restoreSession() {
+  const saved = load(SESSION_KEY, null);
+  if (saved?.v !== SAVE_VERSION || !['table', 'results'].includes(saved.screen)) return false;
+  const isTranscript = (t) => t && typeof t.text === 'string' && Number.isFinite(t.durationSeconds);
+  const judges = Array.isArray(saved.judges) ? saved.judges.filter((id) => judgeById(id)) : [];
+  const queue = (Array.isArray(saved.queue) ? saved.queue : [])
+    .filter((i) => i && judgeById(i.judge) && typeof i.question === 'string')
+    .map((i) => ({
+      judge: i.judge,
+      question: i.question,
+      followUp: !!i.followUp,
+      thread:
+        i.thread?.turns?.length && typeof i.thread.question === 'string'
+          ? { question: i.thread.question, reply: i.thread.reply ?? null, turns: i.thread.turns.filter((t) => isTranscript(t?.transcript) && t.result) }
+          : null,
+      attempts: (Array.isArray(i.attempts) ? i.attempts : [])
+        .filter((a) => a?.result && isTranscript(a.transcript))
+        .map((a) => ({ ...attemptData(a), pending: null })),
+    }));
+  if (!judges.length || !queue.length || typeof saved.summary !== 'string') {
+    forget(SESSION_KEY);
+    return false;
+  }
+  const scene = saved.scene && DIFFICULTY[saved.scene.difficulty] && OCCASIONS[saved.scene.setting] ? saved.scene : { difficulty: 3, setting: 'hackathon' };
+  endSession();
+  Object.assign(state, {
+    summary: saved.summary,
+    judges,
+    scene,
+    pitchSeconds: Number(saved.pitchSeconds) || 180,
+    qaSeconds: Number(saved.qaSeconds) || 60,
+    qaEndsAt: Number(saved.qaEndsAt) || 0,
+    rapid: !!saved.rapid,
+    conversation: !!saved.conversation,
+    answerMode: saved.answerMode === 'type' ? 'type' : 'voice',
+    queue,
+    index: Math.min(queue.length - 1, Math.max(0, Math.round(Number(saved.index)) || 0)),
+    timeUp: !!saved.timeUp,
+    recorded: !!saved.recorded,
+    busy: false,
+    pitch: saved.pitch && isTranscript(saved.pitch.transcript) ? { seconds: Number(saved.pitch.seconds) || 0, transcript: saved.pitch.transcript, error: null, pending: null } : null,
+  });
+
+  if (saved.screen === 'results') {
+    show('results');
+    renderResults();
+    return true;
+  }
+
+  show('table');
+  renderPanel();
+  clearTable();
+  $('qa-timer').hidden = true;
+  const item = current();
+  if (state.rapid) {
+    const left = (state.qaEndsAt - Date.now()) / 1000;
+    if (state.timeUp || !(left > 0)) {
+      state.timeUp = true;
+      finish();
+      return true;
+    }
+    startQaClock(left);
+  }
+  showQuestion(item);
+  renderThread(item);
+  const graded = !state.rapid && !item.thread && item.attempts.at(-1)?.result;
+  if (graded) renderFeedback(item);
+  else {
+    showAnswer();
+    setSeats(item.judge, 'listening');
+  }
+  toast('Picked up where you left off.');
+  return true;
+}
+
 // ---- Wiring -------------------------------------------------------------------------
 
 function initTable() {
@@ -1672,3 +1882,4 @@ function initPasscode() {
 initSetup();
 initTable();
 initPasscode();
+restoreSession();

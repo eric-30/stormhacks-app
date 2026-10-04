@@ -32,8 +32,10 @@ things are the way they are (`decisions.md`), the team's to-do list (`todo.md`).
 - **Keys and settings:** `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`,
   `OPENROUTER_SLIDES_MODEL`, `ELEVENLABS_API_KEY`, `APP_PASSCODE`. Locally in `.env`, which is never
   committed. On Vercel in the project's Environment Variables.
-- **Saved data:** none. The page keeps the slide summary in memory and sends it with
-  each request.
+- **Saved data:** none on the server. The page keeps the slide summary in memory and
+  sends it with each request. The browser's own storage keeps settings, past scores,
+  the summary and the round in progress, so a refresh doesn't lose them. Never slide
+  images or recordings.
 
 ## Judges
 
