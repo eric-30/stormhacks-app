@@ -1,16 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- ToughCrowd mark: two judges seen from behind under one question. -->
-  <!-- Speech bubble -->
-  <path fill="#f2b45a" d="M28.5 4h43a8 8 0 0 1 8 8v12.6a8 8 0 0 1-8 8H56.3L50.3 38l-6-5.4H28.5a8 8 0 0 1-8-8V12a8 8 0 0 1 8-8z" />
-  <!-- Question mark -->
-  <path fill="none" stroke="#f4ecdc" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"
-        d="M44.6 14.6a5.8 5.8 0 1 1 8.2 5.3c-1.9 1-2.5 1.8-2.5 3.6v0.9" />
-  <circle cx="50.3" cy="29.1" r="2.1" fill="#f4ecdc" />
-  <!-- Left judge: shorter, narrower, hair in a bun -->
-  <circle cx="31.9" cy="53.6" r="9.6" fill="#f4ecdc" />
-  <circle cx="39" cy="45.4" r="3" fill="#f4ecdc" />
-  <rect x="13" y="66.2" width="32.5" height="29.8" rx="8.5" fill="#f4ecdc" />
-  <!-- Right judge: taller, broader, squarer shoulders -->
-  <circle cx="67.4" cy="49.4" r="10.4" fill="#f4ecdc" />
-  <rect x="46.8" y="62.8" width="41.2" height="33.2" rx="5" fill="#f4ecdc" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1600">
+  <!-- ToughCrowd mark: two judges seen from behind under one question. Traced from the chosen render. -->
+  <g transform="translate(-124 -59)">
+    <!-- Speech bubble -->
+    <rect x="520" y="123" width="948" height="442" rx="130" fill="#f2b45a" />
+    <polygon points="890,560 1081,560 985,643" fill="#f2b45a" />
+    <!-- Question mark -->
+    <path fill="none" stroke="#f4ecdc" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"
+          d="M922 300a68 68 0 1 1 100 60c-22 13-32 24-32 48v12" />
+    <circle cx="990" cy="496" r="27" fill="#f4ecdc" />
+    <!-- Left judge -->
+    <circle cx="635" cy="866" r="166" fill="#f4ecdc" />
+    <path fill="#f4ecdc" d="M459 1067H756a140 140 0 0 1 140 140V1595H409a100 100 0 0 1-100-100V1217a150 150 0 0 1 150-150z" />
+    <rect x="397" y="1349" width="15" height="260" rx="7.5" fill="#111114" />
+    <rect x="793" y="1349" width="15" height="260" rx="7.5" fill="#111114" />
+    <!-- Right judge -->
+    <circle cx="1242" cy="858" r="163" fill="#f4ecdc" />
+    <path fill="#f4ecdc" d="M1080 1067H1389a150 150 0 0 1 150 150V1495a100 100 0 0 1-100 100H1000a70 70 0 0 1-70-70V1217a150 150 0 0 1 150-150z" />
+    <rect x="1011" y="1347" width="14" height="260" rx="7" fill="#111114" />
+    <rect x="1445" y="1347" width="14" height="260" rx="7" fill="#111114" />
+  </g>
 </svg>
