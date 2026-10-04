@@ -23,7 +23,8 @@ Tick things off here and push. **E** = Eric, **L** = Luca, **A** = art teammate,
 
 ## Saturday evening
 
-- [ ] **All** Devpost by **12:00 AM (Saturday midnight)**: project name ToughCrowd, final
+- [x] **All** Devpost by **12:00 AM (Saturday midnight)**: submitted Saturday 11 PM, still
+      editable until noon. Project name ToughCrowd, final
       team, hardware: no. Required for prizes.
 - [x] **E** Check the ElevenLabs balance (risk 1). 130,622 credits on Saturday afternoon.
 - [x] **E** Work out roughly what one round costs in API credits, for the "What does it
