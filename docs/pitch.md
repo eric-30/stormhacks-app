@@ -46,8 +46,9 @@ First timed run, Saturday 5 PM: 2:23 of talking **without** the demo, 179 words 
   ElevenLabs voices and timestamps, our code counts ums, pace and pauses.
 - Why it's new, about 8 seconds: speaker coaches tell you how you talk; we also question
   you on your project.
-- What's next, about 8 seconds: from you, to your team, to whole events bringing their
-  own rubric.
+- What's next, about 8 seconds: "Next, we take it from one person to a whole event:
+  organizers load their real rubric, and every team gets a practice panel before
+  judging." It also answers "who pays?" before anyone asks.
 
 ## Demo plan
 

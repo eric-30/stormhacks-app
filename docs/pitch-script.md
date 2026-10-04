@@ -5,7 +5,8 @@ plus about 75 seconds of live demo, so 3:00 with a little slack. Don't read it w
 word: the slide shows the headline, you say the thing that isn't on it.
 
 First timed run (Saturday 5 PM) was 2:23 of talking without the demo at 179 words a
-minute. This version cuts about 40% of that. Breathe between slides.
+minute. With this version: 1:47, which plus the demo is about 3:00. Don't add anything.
+Breathe between slides.
 
 ## 1 · Title (3 s)
 
@@ -47,7 +48,8 @@ the ums, pace and pauses. The AI never guesses those numbers."
 
 ## 8 · What's next (8 s)
 
-"Next: from you, to your team, to whole events bringing their own rubric."
+"Next, we take it from one person to a whole event: organizers load their real rubric,
+and every team gets a practice panel before judging."
 
 ## 9 · Thanks (4 s)
 
