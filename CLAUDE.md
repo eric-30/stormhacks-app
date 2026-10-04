@@ -148,7 +148,8 @@ agrees. Details are in `docs/contract-proposals.md`.
 ## How to run
 
 - Locally: `vercel dev`, then open http://localhost:3000
-- Deploy: push to GitHub; Vercel deploys automatically.
+- Deploy: `npx vercel deploy --prod`, logged in to Eric's Vercel account. The Vercel
+  project isn't connected to GitHub, so pushing alone deploys nothing.
 
 ## Rules for Claude
 
