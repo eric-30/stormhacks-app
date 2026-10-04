@@ -1188,6 +1188,13 @@ select:focus {
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+.q-reply {
+  margin: 10px 0 -4px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--muted);
+}
 .voice-error {
   margin: 0 0 12px;
   padding: 10px 14px;
@@ -1364,6 +1371,49 @@ select:focus {
   gap: 10px;
 }
 
+/* A back-and-forth with a judge */
+.thread {
+  display: grid;
+  gap: 8px;
+}
+.bubble {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 15px;
+  line-height: 1.45;
+  animation: rise 0.25s ease-out;
+}
+.bubble span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bubble.judge {
+  justify-self: start;
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+  background: var(--surface);
+  font-family: var(--serif);
+  font-size: 16px;
+}
+.bubble.judge span {
+  font-family: var(--sans);
+  color: var(--amber);
+}
+.bubble.you {
+  justify-self: end;
+  border-bottom-right-radius: 4px;
+  background: var(--surface-2);
+}
+.transcript .thread {
+  padding: 0 28px 20px;
+}
+
 /* Feedback */
 .feedback {
   overflow: hidden;
@@ -1380,6 +1430,12 @@ select:focus {
 }
 .fb-body {
   flex: 1;
+}
+.verdict {
+  margin: 0 0 10px;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.35;
 }
 .fb-text {
   margin: 0;

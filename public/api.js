@@ -85,9 +85,10 @@ const real = {
   // audio/webm Blob -> {text, durationSeconds, wordsPerMinute, fillers, longPauses, words}
   transcribe: (audio) =>
     post('/api/transcribe', { headers: { 'Content-Type': 'audio/webm' }, body: audio }),
-  // -> {feedback, score, followUp, checks}
-  feedback: (summary, question, judge, transcript, scene) =>
-    post('/api/feedback', json({ summary, question, transcript, ...judgeFields(judge, scene) })),
+  // talk: {conversation: [{question, answer}], followUpsLeft} in a back-and-forth, else null.
+  // -> {feedback, score, followUp, checks, reply?, satisfied?}
+  feedback: (summary, question, judge, transcript, scene, talk = null) =>
+    post('/api/feedback', json({ summary, question, transcript, ...judgeFields(judge, scene), ...(talk ?? {}) })),
 };
 
 // ---- Mock mode -------------------------------------------------------------------
@@ -136,6 +137,15 @@ const MOCK_FOLLOW_UPS = [
   'Can you say that again without the jargon?',
 ];
 
+// What a judge says out loud, in mock mode: a reaction before a follow-up, or a closing
+// verdict when satisfied.
+const MOCK_REACTIONS = ['Okay, fair.', 'Hmm. I hear you, but', 'Right. And', 'Interesting.'];
+const MOCK_VERDICTS = [
+  "Alright, that's what I needed. Good save on the numbers, but you took a while to get there.",
+  'Okay, I buy it. Lead with that next time.',
+  "Fair enough. That's a much clearer answer than your first one.",
+];
+
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 const mock = {
@@ -175,15 +185,20 @@ const mock = {
       words,
     };
   },
-  async feedback(summary, question, judge, transcript, scene) {
+  async feedback(summary, question, judge, transcript, scene, talk) {
     await wait(1200);
     const coin = () => Math.random() < 0.65;
     // Harder judges grade a little lower.
     const score = 4 + Math.floor(Math.random() * 6) - (scene.difficulty - 3);
+    // In a back-and-forth, the judge gets more likely to be satisfied with each turn.
+    const turns = talk?.conversation.length ?? 0;
+    const wantsMore = talk ? talk.followUpsLeft > 0 && Math.random() < [0.8, 0.55, 0.35][turns] : Math.random() < 0.5;
+    const followUp = wantsMore ? pick(MOCK_FOLLOW_UPS) : null;
     return {
+      ...(talk ? { reply: followUp ? pick(MOCK_REACTIONS) : pick(MOCK_VERDICTS), satisfied: !followUp } : {}),
       feedback: pick(MOCK_FEEDBACK),
       score: Math.min(10, Math.max(1, score)),
-      followUp: Math.random() < 0.5 ? pick(MOCK_FOLLOW_UPS) : null,
+      followUp,
       checks: {
         answered: coin(),
         usedSlides: coin(),

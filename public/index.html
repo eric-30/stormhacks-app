@@ -217,12 +217,20 @@
                 </div>
               </div>
               <div class="setting">
+                <span class="setting-label">Follow-ups</span>
+                <div class="seg small" data-setting="conversation">
+                  <button data-value="on">Until satisfied</button>
+                  <button data-value="off">One question each</button>
+                </div>
+              </div>
+              <div class="setting">
                 <span class="setting-label">Judges interrupt</span>
                 <div class="seg small" data-setting="interrupts">
                   <button data-value="off">Off</button>
                   <button data-value="on">On</button>
                 </div>
               </div>
+              <p class="hint" id="conversation-hint"></p>
               <p class="hint" id="interrupt-hint"></p>
               <p class="hint">
                 Realistic voices and spoken answers use ElevenLabs credits. For testing, type your
@@ -274,11 +282,14 @@
         </div>
 
         <div class="table-main">
+          <div class="thread" id="thread" hidden aria-live="polite"></div>
+
           <article class="question-card" id="question-card" hidden>
             <div class="q-meta">
               <span id="q-who"></span>
               <span id="q-progress"></span>
             </div>
+            <p class="q-reply" id="q-reply" hidden></p>
             <p class="q-text" id="q-text"></p>
             <p class="voice-error" id="voice-error" hidden></p>
             <button id="replay-btn" class="link-btn">
