@@ -85,10 +85,11 @@ video ready. If only the voice fails, the question still shows as text: read it 
 
 - "We used it to prepare for this judging." Only say it if it's true.
 - How do you know the filler count is right? It comes from the word timings, not the AI.
-  The Engineer judge scored "it's very accurate" a 5: that's a claim, not evidence. **Test
-  it tonight:** read a short script with exactly 10 "um"s and see how many it catches,
-  then say "We tested it: it caught 9 of 10" (with the real number). Admit one limit:
-  every "like" counts, even "I like it".
+  The Engineer judge scored "it's very accurate" a 5: that's a claim, not evidence.
+  **Tested Saturday evening:** Eric read a script with exactly 10 "um"s and 4 "uh"s at
+  normal speed, and it caught all 14. Say: "We tested it with a script of 14 fillers and it
+  caught all 14." Admit one limit: every "like" counts, even "I like it", and it's only as
+  good as the transcription on mumbled words.
 - How do you detect rambling? Be honest: **it's a timer**, like a real moderator. The
   judge cuts in after a set time that depends on difficulty (45 s on Realistic, 25 s on
   Brutal, shorter in the rapid-fire round). Detecting rambling from meaning is a next
