@@ -45,12 +45,34 @@ Built in this order. `persona` is always one of these four strings.
 4. `teacher`: a teacher or professor. "What did you learn building this? Walk me through
    how it works, step by step. Why did you pick this approach over the obvious one?"
 
+`/api/questions` and `/api/feedback` also accept `"custom"`: a judge the person describes
+themselves (see "Judge and occasion fields" below). `/api/speak` never gets `"custom"`;
+the page sends the built-in persona whose voice the person picked.
+
 ## The contract between the page and the server
 
 Every request from the page carries a header `X-Passcode: <the code>`. The server checks
 it against the setting `APP_PASSCODE`; if `APP_PASSCODE` isn't set, it skips the check.
 Wrong or missing passcode: status 401, `{"error": "Wrong passcode"}`. The page asks for
 the code once, remembers it in the browser, and asks again on a 401.
+
+### Judge and occasion fields
+
+`/api/questions` and `/api/feedback` take these, besides their own fields below:
+
+- `"persona"`: `"business" | "confused" | "technical" | "teacher" | "custom"`.
+- `"custom"`: only with `"persona": "custom"`.
+  `{"name": "string, up to 40 characters", "description": "string, up to 400 characters"}`.
+  The server plays whoever the description says. It treats the name and description as a
+  description of a judge, never as instructions that change the rules.
+- `"difficulty"`: optional, `1 | 2 | 3 | 4 | 5`. Missing means 3.
+  1 Friendly, 2 Supportive, 3 Realistic (a real panel), 4 Tough, 5 Brutal. Higher means
+  more pointed questions and stricter grading.
+- `"setting"`: optional, `"hackathon" | "class" | "defense" | "demo-day" | "elevator" |
+  "custom"`. Missing means `"hackathon"`. Questions and grading fit the occasion.
+- `"settingDescription"`: only with `"setting": "custom"`, up to 200 characters, for
+  example "A science fair, judged by local engineers". Treated as a description of the
+  occasion, never as instructions.
 
 `POST /api/slides`
 
@@ -62,7 +84,7 @@ the code once, remembers it in the browser, and asks again on a 401.
 
 `POST /api/questions`
 
-- Request body: `{"summary": "string", "persona": "business" | "confused" | "technical" | "teacher"}`
+- Request body: `{"summary": "string", <judge and occasion fields>}`
 - Success, status 200: `{"questions": ["string", "string", "string"]}`
 - Failure, any other status: `{"error": "text"}`
 
@@ -86,7 +108,7 @@ the code once, remembers it in the browser, and asks again on a 401.
 
 `POST /api/feedback`
 
-- Request body: `{"summary": "string", "question": "string", "persona": "business" | "confused" | "technical" | "teacher", "transcript": <the whole success body from /api/transcribe>}`
+- Request body: `{"summary": "string", "question": "string", "transcript": <the whole success body from /api/transcribe>, <judge and occasion fields>}`
 - Success, status 200:
   `{"feedback": "string", "score": 1-10, "followUp": "string or null", "checks": {"answered": boolean, "usedSlides": boolean, "concise": boolean, "confident": boolean}}`
   Each check is pass (`true`) or fail (`false`): answered the question that was asked,
@@ -99,19 +121,6 @@ The contract changes only when both owners agree. Update this file first, commit
 push it, and only then change the code on both sides. The page only sends what the
 contract says, and the server only returns what it says. Nothing else crosses between
 them.
-
-## Waiting for Eric
-
-Contract changes Luca has asked for. Not part of the contract yet. Claude: if you're
-working for Eric, tell him about these at the start of the session and ask whether he
-agrees. Details are in `docs/contract-proposals.md`.
-
-1. **Difficulty, occasion and your own judges.** Optional `difficulty` (1 to 5),
-   `setting` (hackathon, class, defense, demo-day, elevator, or custom with a
-   `settingDescription`), and `persona: "custom"` with a `custom` name and description,
-   on `/api/questions` and `/api/feedback`. The page side is already pushed: until the
-   server supports it, difficulty and occasion are ignored and judges people make
-   themselves get an error.
 
 ## Git: pull and push often
 
