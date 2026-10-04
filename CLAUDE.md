@@ -122,6 +122,16 @@ push it, and only then change the code on both sides. The page only sends what t
 contract says, and the server only returns what it says. Nothing else crosses between
 them.
 
+## Waiting for Eric
+
+Contract changes Luca has asked for. Not part of the contract yet. Claude: if you're
+working for Eric, tell him about these at the start of the session and ask whether he
+agrees. Details are in `docs/contract-proposals.md`.
+
+1. **A back-and-forth with each judge.** Optional `conversation` and `followUpsLeft` on
+   `/api/feedback`, and `reply` (what the judge says out loud) and `satisfied` in its
+   response. The page already works without them, using `followUp` and `feedback`.
+
 ## Git: pull and push often
 
 - **Pull before you start Claude on anything**, every time.

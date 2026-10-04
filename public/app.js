@@ -61,6 +61,7 @@ function loadSettings() {
     answerMode: 'voice',
     voiceMode: 'eleven',
     interrupts: 'off',
+    conversation: 'on', // judges follow up until they're satisfied
     occasionText: '', // describes the occasion when it's "Something else"
   };
   const saved = { ...defaults, ...load(SETTINGS_KEY, {}) };
@@ -90,6 +91,7 @@ function judgeById(id) {
     sample: mine.description,
     img: CUSTOM_IMG,
     interrupt: "Sorry, let me stop you there. What's the short version?",
+    ack: 'Mm, okay.',
     persona: 'custom',
     voice: mine.voice,
     custom: { name: mine.name, description: mine.description },
@@ -111,6 +113,7 @@ const state = {
   pitchSeconds: 180,
   qaSeconds: 60,
   rapid: false, // full run-through: no feedback until the end
+  conversation: false, // judges follow up until satisfied (Q&A practice only)
   queue: [], // [{judge (id), question, followUp, attempts: [{transcript, result, pending}]}]
   index: 0,
   busy: false, // an answer is being sent
@@ -124,6 +127,8 @@ const pitchRecorder = new Recorder();
 const timers = { pitch: 0, qa: 0 };
 const current = () => state.queue[state.index];
 const judgeOf = (item) => judgeById(item.judge);
+// The question being answered now: a follow-up, in a back-and-forth.
+const questionNow = (item) => item.thread?.question ?? item.question;
 
 // ---- Screens and small UI helpers ---------------------------------------------------
 
@@ -583,6 +588,10 @@ function syncScene() {
   $('format-full-text').textContent =
     `A ${settings.pitchMin}-minute pitch on a timer, then ${plural(settings.qaMin, 'minute')} of ` +
     'rapid-fire questions. Feedback at the end, like the real thing.';
+  $('conversation-hint').textContent =
+    'With follow-ups until satisfied, each judge keeps asking until they like your answer ' +
+    `(up to ${plural(maxFollowUps(settings.difficulty), 'follow-up')} at this difficulty), then tells you what ` +
+    'they thought, out loud. The run-through stays one question each, to keep it quick.';
   const [practice, rapid] = interruptTimes(settings.difficulty);
   $('interrupt-hint').textContent =
     `With interruptions on, a judge cuts in when a spoken answer runs past ${practice} seconds ` +
@@ -598,6 +607,7 @@ async function startSession() {
   state.pitchSeconds = settings.pitchMin * 60;
   state.qaSeconds = settings.qaMin * 60;
   state.rapid = settings.format === 'judging';
+  state.conversation = settings.conversation === 'on' && !state.rapid;
   state.answerMode = settings.answerMode;
   if (state.answerMode === 'voice') {
     try {
@@ -748,7 +758,7 @@ function setSeats(judgeId, seatState) {
 }
 
 function clearTable() {
-  for (const id of ['question-card', 'interjection', 'answer-voice', 'answer-type', 'working', 'problem', 'feedback']) {
+  for (const id of ['thread', 'question-card', 'interjection', 'answer-voice', 'answer-type', 'working', 'problem', 'feedback']) {
     $(id).hidden = true;
   }
 }
@@ -821,20 +831,37 @@ function startQaClock() {
   }, 200);
 }
 
-async function ask() {
-  const item = current();
-  if (!item) return finish();
-  clearTable();
-  $('q-who').innerHTML = esc(judgeOf(item).name) + (item.followUp ? '<span class="q-follow">Follow-up</span>' : '');
+// Puts the question being asked on the card: the opening one, or a follow-up.
+function showQuestion(item) {
+  const followUps = item.thread?.turns.length ?? 0;
+  const tag = followUps
+    ? `<span class="q-follow">Follow-up ${followUps}</span>`
+    : item.followUp
+      ? '<span class="q-follow">Follow-up</span>'
+      : '';
+  $('q-who').innerHTML = esc(judgeOf(item).name) + tag;
   $('q-progress').textContent = `Question ${state.index + 1} of ${state.queue.length}`;
-  $('q-text').textContent = item.question;
+  $('q-text').textContent = questionNow(item);
+  const reply = item.thread?.reply;
+  $('q-reply').hidden = !reply;
+  $('q-reply').textContent = reply ? `“${reply}”` : '';
   $('voice-error').hidden = true;
   const card = $('question-card');
   card.hidden = false;
   card.style.animation = 'none';
   void card.offsetWidth; // restart the entrance animation
   card.style.animation = '';
+}
+
+async function ask() {
+  const item = current();
+  if (!item) return finish();
+  item.thread = null;
+  clearTable();
+  showQuestion(item);
+  renderThread(item);
   showAnswer();
+  if (state.conversation) voice.prefetch(judgeOf(item).ack, judgeOf(item).voice, settings.voiceMode);
 
   // Make the next question's audio while this one is being answered.
   const upcoming = state.queue[state.index + 1];
@@ -860,7 +887,7 @@ async function judgeSays(text, judge, onStart) {
 
 async function speakItem(item) {
   setSeats(item.judge, 'thinking');
-  await judgeSays(item.question, judgeOf(item), () => {
+  await judgeSays(questionNow(item), judgeOf(item), () => {
     if (!recorder.recording) setSeats(item.judge, 'speaking');
   });
   if (current() === item && !state.busy && $('feedback').hidden) setSeats(item.judge, 'listening');
@@ -1017,6 +1044,7 @@ function typedTranscript(text) {
 
 // extra.cutAt: seconds into the answer when the judge cut in, if they did.
 function submit(getTranscript, extra = {}) {
+  if (state.conversation) return submitTurn(getTranscript, extra);
   const item = current();
   const session = state.session;
   const attempt = { transcript: null, result: null, pending: null, cutAt: extra.cutAt ?? null };
@@ -1068,6 +1096,139 @@ function submit(getTranscript, extra = {}) {
       ]);
     },
   );
+}
+
+// ---- A back-and-forth: the judge follows up until satisfied ------------------------
+
+// Most follow-ups a judge asks before wrapping up, by difficulty.
+const maxFollowUps = (difficulty) => [1, 1, 2, 3, 3][difficulty - 1];
+
+// The question as the grader sees it: with a note if the judge had to cut in.
+function questionForGrader(question, cutAt) {
+  return cutAt === null || cutAt === undefined
+    ? question
+    : `${question}\n(The judge cut in after ${Math.round(cutAt)} seconds because the answer ran long, and gave them ${WRAP_UP_SECONDS} seconds to wrap up.)`;
+}
+
+// One answer in a back-and-forth. The judge says "Hmm, okay" straight away, thinks, then
+// either asks a follow-up out loud or wraps up with a spoken verdict and the feedback.
+async function submitTurn(getTranscript, extra) {
+  const item = current();
+  const judge = judgeOf(item);
+  const session = state.session;
+  const thread = (item.thread ??= { turns: [], question: item.question });
+  const turn = { question: thread.question, transcript: null, result: null, cutAt: extra.cutAt ?? null };
+  const followUpsLeft = maxFollowUps(state.scene.difficulty) - thread.turns.length;
+  const talk = {
+    conversation: thread.turns.map((t) => ({ question: t.question, answer: t.transcript.text })),
+    followUpsLeft,
+  };
+
+  state.busy = true;
+  $('answer-voice').hidden = true;
+  $('answer-type').hidden = true;
+  $('interjection').hidden = true;
+  problem(false);
+  setSeats(item.judge, 'speaking');
+  const ack = judgeSays(judge.ack, judge);
+  ack.then(() => session === state.session && state.busy && setSeats(item.judge, 'thinking'));
+  working(`${judge.name} is thinking about that…`);
+
+  try {
+    turn.transcript = await getTranscript();
+    turn.result = await api.feedback(
+      state.summary,
+      questionForGrader(turn.question, turn.cutAt),
+      judge,
+      turn.transcript,
+      state.scene,
+      talk,
+    );
+  } catch (e) {
+    await ack;
+    if (session !== state.session) return;
+    state.busy = false;
+    working(false);
+    setSeats(item.judge, 'listening');
+    problem(e.message, [
+      ['Send it again', () => submitTurn(getTranscript, extra), true],
+      ['Answer again', () => (problem(false), showAnswer())],
+    ]);
+    return;
+  }
+  await ack;
+  if (session !== state.session) return;
+  thread.turns.push(turn);
+  state.busy = false;
+  working(false);
+
+  const { reply, followUp } = turn.result;
+  if (followUp && followUpsLeft > 0) {
+    // Not satisfied yet: react, ask the follow-up, and listen again.
+    thread.question = followUp;
+    thread.reply = reply ?? null;
+    renderThread(item);
+    showQuestion(item);
+    showAnswer();
+    setSeats(item.judge, 'speaking');
+    await judgeSays([reply, followUp].filter(Boolean).join(' '), judge);
+    if (current() === item && !state.busy && !recorder.recording) setSeats(item.judge, 'listening');
+    return;
+  }
+
+  // Satisfied, or out of follow-ups: the whole exchange becomes one attempt.
+  const verdict = reply || verdictFrom(turn.result.feedback);
+  item.attempts.push({
+    turns: thread.turns,
+    transcript: combineTranscripts(thread.turns.map((t) => t.transcript)),
+    result: turn.result,
+    verdict,
+    cutAt: thread.turns.find((t) => t.cutAt !== null)?.cutAt ?? null,
+    pending: null,
+  });
+  item.thread = null;
+  showQuestion(item); // back to the question the conversation started from
+  renderThread(item);
+  renderFeedback(item);
+  setSeats(item.judge, 'speaking');
+  await judgeSays(verdict, judge);
+  if (current() === item) setSeats(item.judge, 'done');
+}
+
+// Without a spoken reply from the server, the judge closes with the first sentence of
+// their feedback.
+function verdictFrom(feedback = '') {
+  const first = feedback.split(/(?<=[.!?])\s+/)[0] ?? '';
+  return `Alright, thank you. ${first}`.slice(0, 300);
+}
+
+// Several answers' delivery numbers as one.
+function combineTranscripts(transcripts) {
+  if (transcripts.length === 1) return transcripts[0];
+  const spoken = transcripts.filter((t) => t.durationSeconds > 0);
+  const seconds = spoken.reduce((sum, t) => sum + t.durationSeconds, 0);
+  const add = (key) => spoken.reduce((sum, t) => sum + (t.fillers?.[key] || 0), 0);
+  return {
+    text: transcripts.map((t) => t.text).join(' … '),
+    durationSeconds: Math.round(seconds * 10) / 10,
+    wordsPerMinute: seconds ? Math.round(spoken.reduce((sum, t) => sum + t.wordsPerMinute * t.durationSeconds, 0) / seconds) : 0,
+    fillers: { um: add('um'), uh: add('uh'), like: add('like') },
+    longPauses: spoken.reduce((sum, t) => sum + (t.longPauses || 0), 0),
+    words: [],
+  };
+}
+
+// The back-and-forth so far, above the question being asked.
+function renderThread(item) {
+  const turns = item.thread?.turns ?? [];
+  $('thread').hidden = !turns.length;
+  $('thread').innerHTML = turns.map((t) => conversationTurn(judgeOf(item), t)).join('');
+}
+
+function conversationTurn(judge, turn) {
+  return `
+    <div class="bubble judge"><span>${esc(judge.name)}</span>${esc(turn.question)}</div>
+    <div class="bubble you"><span>You</span>${transcriptHtml(turn.transcript) || '<em>Nothing was heard.</em>'}</div>`;
 }
 
 function next() {
@@ -1227,10 +1388,12 @@ function checksList(checks, typed) {
 }
 
 function renderFeedback(item) {
-  const { transcript, result, cutAt } = item.attempts.at(-1);
+  const { transcript, result, cutAt, turns, verdict } = item.attempts.at(-1);
   const score = clampScore(result.score);
   const previous = item.attempts.length > 1 ? clampScore(item.attempts.at(-2).result.score) : null;
-  const isLast = state.index >= state.queue.length - 1 && !result.followUp;
+  // After a back-and-forth the judge has already asked their follow-ups.
+  const followUp = turns ? null : result.followUp;
+  const isLast = state.index >= state.queue.length - 1 && !followUp;
 
   let delta = '';
   if (previous !== null) {
@@ -1245,6 +1408,7 @@ function renderFeedback(item) {
       ${scoreRing(score)}
       <div class="fb-body">
         <p class="eyebrow">${esc(judgeOf(item).name)}</p>
+        ${verdict ? `<p class="verdict">“${esc(verdict)}”</p>` : ''}
         <p class="fb-text">${esc(result.feedback)}</p>
         ${checksList(result.checks, !transcript.durationSeconds)}
         ${cutAt !== null ? `<span class="cut-chip">Cut off at ${fmtTime(cutAt)}</span>` : ''}
@@ -1252,14 +1416,21 @@ function renderFeedback(item) {
       </div>
     </div>
     ${deliveryReport(transcript)}
-    <details class="transcript"${transcript.durationSeconds ? ' open' : ''}>
-      <summary>What you said</summary>
-      <p>${transcriptHtml(transcript) || '<em>Nothing was heard.</em>'}</p>
-    </details>
-    ${result.followUp ? `<p class="follow-up"><span>Follow-up</span><q>${esc(result.followUp)}</q></p>` : ''}
+    ${
+      turns?.length > 1
+        ? `<details class="transcript" open>
+            <summary>The conversation</summary>
+            <div class="thread">${turns.map((t) => conversationTurn(judgeOf(item), t)).join('')}</div>
+          </details>`
+        : `<details class="transcript"${transcript.durationSeconds ? ' open' : ''}>
+            <summary>What you said</summary>
+            <p>${transcriptHtml(transcript) || '<em>Nothing was heard.</em>'}</p>
+          </details>`
+    }
+    ${followUp ? `<p class="follow-up"><span>Follow-up</span><q>${esc(followUp)}</q></p>` : ''}
     <div class="fb-actions">
       <button class="btn btn-ghost" data-act="retry">Try this one again</button>
-      ${result.followUp ? '<button class="btn" data-act="follow-up">Answer the follow-up</button>' : ''}
+      ${followUp ? '<button class="btn" data-act="follow-up">Answer the follow-up</button>' : ''}
       <button class="btn btn-primary" data-act="next">${isLast ? 'See results' : 'Next question'}</button>
     </div>`;
   box.hidden = false;
@@ -1272,7 +1443,11 @@ function onFeedbackAction(e) {
   const item = current();
   if (!action || !item) return;
   if (action === 'retry') {
+    voice.stop();
     $('feedback').hidden = true;
+    item.thread = null; // a back-and-forth starts again from the first question
+    showQuestion(item);
+    renderThread(item);
     setSeats(item.judge, 'listening');
     showAnswer();
     $('question-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
