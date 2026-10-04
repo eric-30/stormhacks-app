@@ -21,6 +21,10 @@ Use the name only if a judge brings it up. Opening line:
 A softer ending if that one feels too much: "...preps you for the panel that grills you
 on your project."
 
+**Optional, about 7 seconds, right after "Hi, we're D3V D3M0Ns."** The script leaves it
+out to save time; now that the demo is 60 seconds there's room. Use it if the timed run
+stays under 3:00.
+
 ## Why it matters (mentors: sell this harder)
 
 - **The gap:** "Everyone practises the pitch. Nobody practises the questions, because
@@ -29,7 +33,7 @@ on your project."
   thesis, non-native speakers. The people who freeze aren't the ones with bad ideas.
 - **What's at stake:** grades, prizes, scholarships, funding. A good project loses in one
   minute of Q&A.
-- Don't invent statistics. Our real case competition story plus a clear "who and why" is
+- Don't invent statistics. Our real business competition story plus a clear "who and why" is
   stronger than a made-up number.
 
 ## Who it's for
@@ -41,18 +45,18 @@ The four judges: the Investor, the Grandma, the Engineer and the Teacher.
 
 ## Shape
 
-The words are in `pitch-script.md`. Budget: about 1:40 of talking (about 240 words at
-140 to 150 a minute) plus about 75 seconds of demo, so 3:00 with a little slack.
+The words are in `pitch-script.md`. Budget: about 1:45 of talking plus about 60 seconds
+of demo, so about 2:45, with 15 seconds of slack for the opening line or a slow moment.
 
-First timed run, Saturday 5 PM: 2:23 of talking **without** the demo, 179 words a minute,
-7 fillers. Too long and too fast: cut about 40% of the words, then slow down.
+Timed runs: Saturday 5 PM, 2:23 of talking without the demo at 179 words a minute and 7
+fillers (too long, too fast). After cutting the script: 1:47. Keep slowing down.
 
-- Problem, about 25 seconds: grade 9, our first case competition, a judge asked about our
-  financials and we both froze.
+- Problem, about 25 seconds: grade 9, our first business competition (slide 2 says
+  "Business Competition"), a judge asked about our financials and we both froze.
 - Where pitches break, about 10 seconds: one sentence.
 - Solution, about 20 seconds: a flight simulator for your pitch, any panel, friendly to
   brutal.
-- Live demo, about 75 seconds: see "Demo plan" below.
+- Live demo, about 60 seconds: see "Demo plan" below.
 - How it works, about 25 seconds: Gemini reads the slides, Claude plays the judges,
   ElevenLabs voices and timestamps, our code counts ums, pace and pauses.
 - Why it's new, a few words or said during the demo: "unlike speaker coaches, it
@@ -71,7 +75,7 @@ First timed run, Saturday 5 PM: 2:23 of talking **without** the demo, 179 words 
 laptops, no projector. Use two laptops: **laptop A shows the slides**, facing the judges,
 and Eric presents from it; **laptop B runs ToughCrowd**, and Darren drives it.
 
-About 75 seconds. Eric talks and faces the judges; Darren clicks.
+About 60 seconds. Eric talks and faces the judges; Darren clicks.
 
 **The cafeteria will be loud.** Before judging, test one recording at our table: is the
 judge's voice loud enough (volume to max, a small speaker if anyone has one), and do
@@ -109,11 +113,21 @@ video ready. If only the voice fails, the question still shows as text: read it 
 **Optional, only if we're under time and a judge seems curious:** "Want to try it? Answer
 one question." Turn laptop B toward them.
 
-**Rehearse it 3 times tonight** with the real setup, timing each run.
+**Rehearse it 3 times Sunday morning** with the real setup, timing each run.
+
+**The Grandma's likely questions** (her questions on our real deck, Sunday morning, 15
+questions over 5 runs, all one of these three; answers are in the study page drill):
+1. "Pretend I'm your grandma: what actually happens when I use it, and how does it help?"
+2. "You said it counts the ums. How does it know, and is it accurate?"
+3. "How does it know what to ask about my project, and are the questions fair?"
 
 ## Lines to have ready
 
-- "We used it to prepare for this judging." Only say it if it's true.
+- "We used it to prepare for this judging." True now: our first run said 179 words a
+  minute and 7 fillers, so we cut the script and slowed down.
+- Who pays? "Event organizers first: they give every team a practice panel before
+  judging. Then founders preparing for investors, and sales teams." Describe the stakes,
+  not a price. It costs us about 25 cents a session, so there's room for a price.
 - How do you know the filler count is right? It comes from the word timings, not the AI.
   The Engineer judge scored "it's very accurate" a 5: that's a claim, not evidence.
   **Tested Saturday evening:** Eric read a script with exactly 10 "um"s and 4 "uh"s at
@@ -137,7 +151,7 @@ one question." Turn laptop B toward them.
     (135 credits for 2:36, assuming nobody else recorded in that window). A session
     sends about 4 to 5 minutes of audio, so about 250 credits, roughly 5 cents. Typed
     answers send none.
-  OpenRouter's real spend for all of Saturday's testing was 5 cents.
+  OpenRouter's real spend for the whole weekend of building and testing: 18 cents.
 - How is this different from InterVU? InterVU asked about you, for a job. ToughCrowd
   reads your slides and a panel asks about your project: four judges, each with their
   own angle, who cut in when you ramble.
